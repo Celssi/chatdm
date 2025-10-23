@@ -1,15 +1,30 @@
 package fi.celssi.chatdm.ChatDM;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.Map;
 
 @Service
 public class Oracle {
 
+    private String[] yesOrNoAnswers;
+
+    @PostConstruct
+    public void init() throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        ClassPathResource resource = new ClassPathResource("oracle-answers.json");
+        Map<String, String[]> data = mapper.readValue(resource.getInputStream(), Map.class);
+        yesOrNoAnswers = data.get("yesOrNoAnswers");
+    }
+
     @Tool(name = "ChatDM_yes_or_no", description = "Use this oracle when playing a rpg to determine an answer for yes or no questions.")
     public String yesOrNo() {
-        String[] answers = {"Strong no", "No", "No", "No", "Weak no", "Weak yes", "Yes", "Yes", "Yes", "Strong yes"};
-        return answers[(int) (Math.random() * answers.length)];
+        return yesOrNoAnswers[(int) (Math.random() * yesOrNoAnswers.length)];
     }
 
     @Tool(name = "ChatDM_roll_dice", description = """
