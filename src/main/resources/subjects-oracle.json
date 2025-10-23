@@ -1,0 +1,18 @@
+{
+  "subjects": [
+    "Enemy", "Ally", "Stranger", "Friend", "Rival", "Mentor", "Student",
+    "Leader", "Follower", "Guard", "Thief", "Merchant", "Noble", "Peasant",
+    "Priest", "Wizard", "Warrior", "Rogue", "Monster", "Beast", "Undead",
+    "Demon", "Angel", "Dragon", "Giant", "Dwarf", "Elf", "Orc", "Goblin",
+    "Troll", "Ghost", "Spirit", "God", "Artifact", "Treasure", "Trap",
+    "Door", "Passage", "Room", "Building", "City", "Village", "Forest",
+    "Mountain", "River", "Ocean", "Desert", "Cave", "Dungeon", "Castle",
+    "Temple", "Tower", "Bridge", "Road", "Path", "Wall", "Gate", "Portal",
+    "Magic", "Weapon", "Armor", "Potion", "Scroll", "Book", "Map", "Key",
+    "Food", "Water", "Gold", "Jewel", "Crown", "Ring", "Amulet", "Cloak",
+    "Staff", "Sword", "Shield", "Bow", "Arrow", "Dagger", "Spear", "Axe",
+    "Hammer", "Mace", "Chain", "Rope", "Torch", "Lantern", "Fire", "Light",
+    "Darkness", "Shadow", "Mist", "Storm", "Wind", "Rain", "Snow", "Ice",
+    "Thunder", "Lightning", "Earth", "Stone", "Metal", "Wood", "Cloth"
+  ]
+}

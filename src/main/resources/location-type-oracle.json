@@ -1,0 +1,16 @@
+{
+  "locations": [
+    "Tavern", "Inn", "Temple", "Church", "Cathedral", "Shrine", "Monastery",
+    "Castle", "Fort", "Tower", "Keep", "Palace", "Manor", "House", "Cottage",
+    "Shop", "Market", "Bazaar", "Warehouse", "Dock", "Harbor", "Port",
+    "Cave", "Cavern", "Grotto", "Dungeon", "Crypt", "Tomb", "Catacomb",
+    "Forest", "Woods", "Jungle", "Swamp", "Marsh", "Bog", "Plains", "Field",
+    "Meadow", "Desert", "Wasteland", "Mountain", "Hill", "Valley", "Canyon",
+    "River", "Stream", "Lake", "Pond", "Ocean", "Sea", "Beach", "Coast",
+    "Village", "Town", "City", "Capital", "Ruins", "Settlement", "Camp",
+    "Road", "Path", "Trail", "Bridge", "Gate", "Wall", "Fortress",
+    "Arena", "Colosseum", "Theater", "Library", "Academy", "School",
+    "Prison", "Dungeon", "Barracks", "Stable", "Mill", "Farm", "Garden",
+    "Mine", "Quarry", "Forge", "Workshop", "Laboratory", "Observatory"
+  ]
+}

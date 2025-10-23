@@ -1,0 +1,13 @@
+{
+  "appearances": [
+    "Tall", "Short", "Average height", "Muscular", "Thin", "Heavyset",
+    "Scarred", "Tattooed", "Pierced", "Bald", "Long-haired", "Short-haired",
+    "Bearded", "Clean-shaven", "Young", "Middle-aged", "Elderly", "Beautiful",
+    "Handsome", "Plain", "Ugly", "Distinctive", "Forgettable", "Intimidating",
+    "Frail", "Robust", "Weathered", "Pale", "Dark-skinned", "Tanned",
+    "Well-dressed", "Poorly-dressed", "Armored", "Robed", "Ragged", "Noble",
+    "Common", "Exotic", "Mysterious", "One-eyed", "Limping", "Hunched",
+    "Graceful", "Clumsy", "Elegant", "Rough", "Pristine", "Dirty", "Bloodied",
+    "Hooded", "Masked", "Veiled", "Gloved", "Barefoot", "Armed", "Unarmed"
+  ]
+}

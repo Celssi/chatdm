@@ -1,0 +1,17 @@
+{
+  "complications": [
+    "Time is running out", "Resources are scarce", "The way is blocked",
+    "Someone is injured", "Equipment breaks", "Help is delayed", "Enemy reinforcements arrive",
+    "The weather worsens", "A key is missing", "Information is false", "Allies are unavailable",
+    "An innocent is threatened", "A debt is called in", "The law intervenes",
+    "Magic doesn't work as expected", "A secret is discovered", "Someone is watching",
+    "The plan is exposed", "Loyalties are questioned", "Old enemies return",
+    "New threats emerge", "The situation escalates", "Collateral damage occurs",
+    "Moral dilemma arises", "Personal feelings interfere", "Past comes back to haunt",
+    "Authority is challenged", "Trust is broken", "Corruption is revealed",
+    "Innocents are endangered", "Sacrifice is required", "The stakes are raised",
+    "An unexpected ally appears", "A betrayal occurs", "A price must be paid",
+    "The truth is complicated", "Multiple factions are involved", "Time loop occurs",
+    "Prophecy comes true", "Curse takes effect", "Bargain comes due"
+  ]
+}

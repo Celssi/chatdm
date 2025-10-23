@@ -1,0 +1,13 @@
+{
+  "traps": [
+    "Pit trap", "Spiked pit", "Covered pit", "Collapsing floor", "Swinging blade",
+    "Arrow trap", "Dart trap", "Spear trap", "Axe trap", "Boulder trap",
+    "Rolling stone", "Falling ceiling", "Crushing walls", "Poison needle",
+    "Poison gas", "Acid spray", "Fire jet", "Lightning bolt", "Ice blast",
+    "Magic missile", "Alarm", "Net trap", "Cage trap", "Bear trap",
+    "Teleporter", "Displacement", "Polymorph", "Petrification", "Sleep gas",
+    "Confusion mist", "Fear effect", "Charm effect", "Illusion", "Summoning",
+    "Curse", "Level drain", "Ability drain", "Magic drain", "Life drain",
+    "Explosive rune", "Glyph of warding", "Symbol of death", "Triggered spell"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "directions": [
+    "North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest",
+    "Up", "Down", "Forward", "Backward", "Left", "Right", "Straight ahead"
+  ]
+}

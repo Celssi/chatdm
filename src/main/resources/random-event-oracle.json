@@ -1,0 +1,16 @@
+{
+  "events": [
+    "Someone arrives", "Someone leaves", "A fight breaks out", "An alarm sounds",
+    "Something breaks", "Something is discovered", "Weather changes", "Time passes quickly",
+    "Something is lost", "Something is found", "A secret is revealed", "A lie is exposed",
+    "Help arrives", "Danger approaches", "An opportunity appears", "A trap is triggered",
+    "Magic surges", "Magic fails", "An old friend appears", "An enemy returns",
+    "A rumor spreads", "A deal is offered", "Someone is betrayed", "Someone is saved",
+    "Fire starts", "Water floods in", "Ground shakes", "Wind picks up",
+    "Something explodes", "Something collapses", "Light fades", "Darkness lifts",
+    "A sound is heard", "Silence falls", "A smell is noticed", "Something tastes wrong",
+    "Someone screams", "Someone laughs", "Someone cries", "Someone sings",
+    "An animal appears", "A monster attacks", "Guards arrive", "Reinforcements come",
+    "Someone gets sick", "Someone is healed", "Someone transforms", "Something awakens"
+  ]
+}

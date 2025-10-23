@@ -1,0 +1,14 @@
+{
+  "personalities": [
+    "Honest", "Deceitful", "Loyal", "Treacherous", "Brave", "Cowardly",
+    "Wise", "Foolish", "Patient", "Impulsive", "Cautious", "Reckless",
+    "Optimistic", "Pessimistic", "Cheerful", "Gloomy", "Witty", "Dull",
+    "Creative", "Unimaginative", "Ambitious", "Content", "Hardworking", "Lazy",
+    "Disciplined", "Chaotic", "Methodical", "Spontaneous", "Serious", "Humorous",
+    "Compassionate", "Callous", "Empathetic", "Apathetic", "Romantic", "Practical",
+    "Idealistic", "Cynical", "Trusting", "Paranoid", "Extroverted", "Introverted",
+    "Leader", "Follower", "Rebellious", "Conformist", "Scholarly", "Ignorant",
+    "Artistic", "Scientific", "Religious", "Secular", "Traditional", "Progressive",
+    "Vengeful", "Forgiving", "Stubborn", "Flexible", "Proud", "Humble"
+  ]
+}

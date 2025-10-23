@@ -1,0 +1,17 @@
+{
+  "actions": [
+    "Attack", "Defend", "Hide", "Move", "Wait", "Speak", "Threaten",
+    "Negotiate", "Deceive", "Persuade", "Intimidate", "Assist", "Betray",
+    "Flee", "Chase", "Investigate", "Search", "Guard", "Patrol", "Rest",
+    "Eat", "Drink", "Sleep", "Travel", "Trade", "Steal", "Break", "Repair",
+    "Create", "Destroy", "Open", "Close", "Lock", "Unlock", "Climb", "Jump",
+    "Swim", "Dive", "Ride", "Drive", "Fly", "Sail", "Row", "Cast", "Pray",
+    "Meditate", "Study", "Read", "Write", "Draw", "Play", "Sing", "Dance",
+    "Work", "Build", "Craft", "Cook", "Clean", "Organize", "Plan", "Scheme",
+    "Ambush", "Retreat", "Advance", "Flank", "Surround", "Escape", "Capture",
+    "Release", "Bind", "Free", "Heal", "Harm", "Poison", "Cure", "Revive",
+    "Kill", "Spare", "Question", "Answer", "Command", "Obey", "Rebel", "Submit",
+    "Lead", "Follow", "Ally", "Oppose", "Help", "Hinder", "Reveal", "Conceal",
+    "Discover", "Lose", "Find", "Give", "Take", "Buy", "Sell", "Barter"
+  ]
+}

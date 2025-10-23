@@ -1,0 +1,7 @@
+{
+  "almostCertain": ["No", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"],
+  "likely": ["No", "No", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"],
+  "fiftyFifty": ["No", "No", "No", "No", "No", "Yes", "Yes", "Yes", "Yes", "Yes"],
+  "unlikely": ["No", "No", "No", "No", "No", "No", "No", "No", "Yes", "Yes"],
+  "almostImpossible": ["No", "No", "No", "No", "No", "No", "No", "No", "No", "Yes"]
+}
