@@ -1,5 +1,6 @@
 package fi.celssi.chatdm.ChatDM;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.tool.annotation.Tool;
@@ -20,26 +21,27 @@ public class DungeonOracle {
     @PostConstruct
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        Map<String, String[]> data;
+        TypeReference<Map<String, String[]>> typeRef = new TypeReference<>() {
+        };
 
         // Load dungeon rooms
         ClassPathResource resource = new ClassPathResource("dungeon-room-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        Map<String, String[]> data = mapper.readValue(resource.getInputStream(), typeRef);
         dungeonRooms = data.get("rooms");
 
         // Load treasures
         resource = new ClassPathResource("treasure-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         treasures = data.get("treasures");
 
         // Load traps
         resource = new ClassPathResource("trap-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         traps = data.get("traps");
 
         // Load directions
         resource = new ClassPathResource("direction-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         directions = data.get("directions");
     }
 

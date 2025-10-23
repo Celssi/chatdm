@@ -1,5 +1,6 @@
 package fi.celssi.chatdm.ChatDM;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.tool.annotation.Tool;
@@ -22,30 +23,32 @@ public class NarrativeOracle {
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         Map<String, String[]> data;
+        TypeReference<Map<String, String[]>> typeRef = new TypeReference<>() {
+        };
 
         // Load actions
         ClassPathResource resource = new ClassPathResource("actions-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         actions = data.get("actions");
 
         // Load subjects
         resource = new ClassPathResource("subjects-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         subjects = data.get("subjects");
 
         // Load descriptors
         resource = new ClassPathResource("descriptors-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         descriptors = data.get("descriptors");
 
         // Load random events
         resource = new ClassPathResource("random-event-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         randomEvents = data.get("events");
 
         // Load complications
         resource = new ClassPathResource("complication-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         complications = data.get("complications");
     }
 

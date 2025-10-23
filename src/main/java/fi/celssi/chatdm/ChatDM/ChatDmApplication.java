@@ -1,12 +1,11 @@
 package fi.celssi.chatdm.ChatDM;
 
-import org.springframework.ai.support.ToolCallbacks;
-import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
-
-import java.util.List;
+import org.springframework.context.annotation.Configuration;
 
 @SpringBootApplication
 public class ChatDmApplication {
@@ -15,20 +14,15 @@ public class ChatDmApplication {
         SpringApplication.run(ChatDmApplication.class, args);
     }
 
-    @Bean
-    public List<ToolCallback> oracles(Oracle oracle,
-                                       NpcOracle npcOracle,
-                                       SceneOracle sceneOracle,
-                                       NarrativeOracle narrativeOracle,
-                                       DungeonOracle dungeonOracle,
-                                       ConversationOracle conversationOracle) {
-        return List.of(
-                ToolCallbacks.from(oracle),
-                ToolCallbacks.from(npcOracle),
-                ToolCallbacks.from(sceneOracle),
-                ToolCallbacks.from(narrativeOracle),
-                ToolCallbacks.from(dungeonOracle),
-                ToolCallbacks.from(conversationOracle)
-        );
+    @Configuration
+    public class McpConfig {
+
+        @Bean
+        public ToolCallbackProvider toolCallbackProvider(DungeonOracle dungeonOracle, NarrativeOracle narrativeOracle, NpcOracle npcOracle, SceneOracle sceneOracle, BasicOracle basicOracle, ConversationOracle conversationOracle) {
+            return MethodToolCallbackProvider
+                    .builder()
+                    .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle, basicOracle, conversationOracle)
+                    .build();
+        }
     }
 }

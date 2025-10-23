@@ -1,5 +1,6 @@
 package fi.celssi.chatdm.ChatDM;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.tool.annotation.Tool;
@@ -10,18 +11,20 @@ import java.io.IOException;
 import java.util.Map;
 
 @Service
-public class Oracle {
+public class BasicOracle {
 
     private String[] yesOrNoAnswers;
-    private Map<String, String[]> likelihoodAnswers;
+    private Map likelihoodAnswers;
 
     @PostConstruct
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
+        TypeReference<Map<String, String[]>> typeRef = new TypeReference<>() {
+        };
 
         // Load yes-or-no answers
         ClassPathResource resource = new ClassPathResource("yes-or-no-answers.json");
-        Map<String, String[]> data = mapper.readValue(resource.getInputStream(), Map.class);
+        Map<String, String[]> data = mapper.readValue(resource.getInputStream(), typeRef);
         yesOrNoAnswers = data.get("yesOrNoAnswers");
 
         // Load likelihood answers
@@ -53,7 +56,7 @@ public class Oracle {
             'unlikely' (20% yes), 'almostImpossible' (10% yes).
             """)
     public String likelihood(String likelihood) {
-        String[] answers = likelihoodAnswers.get(likelihood);
+        String[] answers = (String[]) likelihoodAnswers.get(likelihood);
         if (answers == null) {
             return "Invalid likelihood. Use: almostCertain, likely, fiftyFifty, unlikely, or almostImpossible";
         }

@@ -1,5 +1,6 @@
 package fi.celssi.chatdm.ChatDM;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.tool.annotation.Tool;
@@ -21,25 +22,27 @@ public class NpcOracle {
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         Map<String, String[]> data;
+        TypeReference<Map<String, String[]>> typeRef = new TypeReference<>() {
+        };
 
         // Load NPC behaviors
         ClassPathResource resource = new ClassPathResource("npc-behavior-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         npcBehaviors = data.get("behaviors");
 
         // Load NPC appearances
         resource = new ClassPathResource("npc-appearance-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         npcAppearances = data.get("appearances");
 
         // Load NPC personalities
         resource = new ClassPathResource("npc-personality-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         npcPersonalities = data.get("personalities");
 
         // Load NPC occupations
         resource = new ClassPathResource("npc-occupation-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         npcOccupations = data.get("occupations");
     }
 

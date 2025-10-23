@@ -1,5 +1,6 @@
 package fi.celssi.chatdm.ChatDM;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.tool.annotation.Tool;
@@ -21,25 +22,27 @@ public class SceneOracle {
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         Map<String, String[]> data;
-
+        TypeReference<Map<String, String[]>> typeRef = new TypeReference<>() {
+        };
+        
         // Load location types
         ClassPathResource resource = new ClassPathResource("location-type-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         locationTypes = data.get("locations");
 
         // Load atmospheres
         resource = new ClassPathResource("atmosphere-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         atmospheres = data.get("atmospheres");
 
         // Load weather
         resource = new ClassPathResource("weather-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         weather = data.get("weather");
 
         // Load time of day
         resource = new ClassPathResource("time-of-day-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         timeOfDay = data.get("times");
     }
 

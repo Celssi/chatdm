@@ -1,8 +1,9 @@
 package fi.celssi.chatdm.ChatDM;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
-import org.springframework.ai.model.function.Tool;
+import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -20,20 +21,22 @@ public class ConversationOracle {
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         Map<String, String[]> data;
+        TypeReference<Map<String, String[]>> typeRef = new TypeReference<>() {
+        };
 
         // Load conversation topics
         ClassPathResource resource = new ClassPathResource("conversation-topics-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         topics = data.get("topics");
 
         // Load conversation moods
         resource = new ClassPathResource("conversation-moods-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         moods = data.get("moods");
 
         // Load conversation intents
         resource = new ClassPathResource("conversation-intents-oracle.json");
-        data = mapper.readValue(resource.getInputStream(), Map.class);
+        data = mapper.readValue(resource.getInputStream(), typeRef);
         intents = data.get("intents");
     }
 
