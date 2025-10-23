@@ -1,0 +1,12 @@
+{
+  "behaviors": [
+    "Friendly", "Hostile", "Neutral", "Suspicious", "Trusting", "Helpful",
+    "Obstructive", "Fearful", "Brave", "Cowardly", "Aggressive", "Peaceful",
+    "Talkative", "Silent", "Curious", "Indifferent", "Excited", "Bored",
+    "Angry", "Happy", "Sad", "Anxious", "Calm", "Nervous", "Confident",
+    "Uncertain", "Secretive", "Open", "Deceptive", "Honest", "Greedy",
+    "Generous", "Jealous", "Proud", "Humble", "Arrogant", "Respectful",
+    "Rude", "Polite", "Formal", "Casual", "Serious", "Playful", "Stern",
+    "Gentle", "Harsh", "Kind", "Cruel", "Merciful", "Vengeful", "Forgiving"
+  ]
+}

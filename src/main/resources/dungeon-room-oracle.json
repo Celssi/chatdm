@@ -1,0 +1,15 @@
+{
+  "rooms": [
+    "Empty", "Monster lair", "Trap", "Treasure room", "Guard room", "Storage room",
+    "Living quarters", "Kitchen", "Dining hall", "Throne room", "Temple", "Shrine",
+    "Library", "Study", "Laboratory", "Workshop", "Armory", "Prison", "Torture chamber",
+    "Barracks", "Training room", "Arena", "Bath house", "Latrine", "Well room",
+    "Cistern", "Crypt", "Tomb", "Burial chamber", "Ossuary", "Altar room",
+    "Summoning circle", "Portal room", "Magic circle", "Crystal chamber",
+    "Mirror room", "Statue hall", "Gallery", "Museum", "Trophy room",
+    "Collapsed room", "Flooded room", "Burning room", "Frozen room", "Poisoned room",
+    "Illusory room", "Shifting room", "Rotating room", "Puzzle room", "Riddle room",
+    "Secret passage", "Hidden chamber", "False room", "Dead end", "Junction",
+    "Stairway up", "Stairway down", "Elevator", "Chute", "Pit"
+  ]
+}

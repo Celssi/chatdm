@@ -1,0 +1,12 @@
+{
+  "atmospheres": [
+    "Peaceful", "Tense", "Ominous", "Welcoming", "Hostile", "Mysterious",
+    "Cheerful", "Gloomy", "Oppressive", "Liberating", "Sacred", "Profane",
+    "Clean", "Filthy", "Orderly", "Chaotic", "Busy", "Deserted", "Crowded",
+    "Empty", "Noisy", "Silent", "Bright", "Dark", "Warm", "Cold", "Damp",
+    "Dry", "Fragrant", "Stinking", "Fresh", "Stale", "Alive", "Dead",
+    "Ancient", "New", "Decaying", "Pristine", "Magical", "Mundane",
+    "Dangerous", "Safe", "Exotic", "Familiar", "Grand", "Humble",
+    "Elegant", "Crude", "Sophisticated", "Primitive", "Inspiring", "Depressing"
+  ]
+}

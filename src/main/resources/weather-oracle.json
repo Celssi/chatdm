@@ -1,0 +1,10 @@
+{
+  "weather": [
+    "Clear", "Cloudy", "Overcast", "Foggy", "Misty", "Hazy",
+    "Raining lightly", "Raining heavily", "Drizzling", "Stormy",
+    "Thunderstorm", "Lightning", "Snowing lightly", "Snowing heavily",
+    "Blizzard", "Sleeting", "Hailing", "Windy", "Breezy", "Calm",
+    "Hot", "Warm", "Cool", "Cold", "Freezing", "Sweltering",
+    "Humid", "Dry", "Dusty", "Sandstorm", "Hurricane", "Tornado"
+  ]
+}

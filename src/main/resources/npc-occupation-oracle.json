@@ -1,0 +1,14 @@
+{
+  "occupations": [
+    "Merchant", "Guard", "Farmer", "Blacksmith", "Innkeeper", "Priest",
+    "Wizard", "Warrior", "Thief", "Assassin", "Noble", "Beggar", "Servant",
+    "Scholar", "Healer", "Herbalist", "Hunter", "Fisher", "Sailor", "Soldier",
+    "Captain", "General", "King", "Queen", "Prince", "Princess", "Duke",
+    "Baron", "Knight", "Squire", "Bard", "Minstrel", "Jester", "Cook",
+    "Baker", "Butcher", "Tailor", "Cobbler", "Carpenter", "Mason", "Miner",
+    "Jeweler", "Alchemist", "Apothecary", "Scribe", "Librarian", "Teacher",
+    "Student", "Monk", "Nun", "Bishop", "Acolyte", "Druid", "Ranger",
+    "Paladin", "Necromancer", "Sorcerer", "Warlock", "Rogue", "Spy", "Diplomat",
+    "Messenger", "Guide", "Trader", "Smuggler", "Pirate", "Bandit", "Mercenary"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "descriptors": [
+    "Ancient", "Modern", "Old", "New", "Young", "Aged", "Worn", "Fresh",
+    "Broken", "Intact", "Damaged", "Perfect", "Beautiful", "Ugly", "Plain",
+    "Ornate", "Simple", "Complex", "Small", "Large", "Tiny", "Huge", "Massive",
+    "Delicate", "Sturdy", "Fragile", "Strong", "Weak", "Powerful", "Feeble",
+    "Bright", "Dark", "Dim", "Glowing", "Shadowy", "Transparent", "Opaque",
+    "Colorful", "Dull", "Shiny", "Rusty", "Clean", "Dirty", "Pure", "Corrupted",
+    "Holy", "Cursed", "Blessed", "Damned", "Sacred", "Profane", "Divine",
+    "Infernal", "Celestial", "Abyssal", "Ethereal", "Material", "Magical",
+    "Mundane", "Rare", "Common", "Unique", "Ordinary", "Extraordinary",
+    "Natural", "Artificial", "Living", "Dead", "Animate", "Inanimate",
+    "Hot", "Cold", "Warm", "Cool", "Frozen", "Burning", "Wet", "Dry", "Damp",
+    "Smooth", "Rough", "Sharp", "Blunt", "Pointed", "Round", "Square", "Twisted",
+    "Straight", "Curved", "Flat", "Hollow", "Solid", "Liquid", "Gaseous",
+    "Heavy", "Light", "Dense", "Sparse", "Thick", "Thin", "Wide", "Narrow",
+    "Loud", "Quiet", "Silent", "Noisy", "Peaceful", "Chaotic", "Orderly"
+  ]
+}

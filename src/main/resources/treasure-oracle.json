@@ -1,0 +1,15 @@
+{
+  "treasures": [
+    "Gold coins", "Silver coins", "Copper coins", "Platinum coins", "Gems",
+    "Jewelry", "Ring", "Necklace", "Crown", "Tiara", "Bracelet", "Amulet",
+    "Magic sword", "Magic dagger", "Magic axe", "Magic bow", "Magic staff",
+    "Magic wand", "Magic armor", "Magic shield", "Magic cloak", "Magic boots",
+    "Magic gloves", "Magic helm", "Magic belt", "Potion of healing",
+    "Potion of strength", "Potion of invisibility", "Potion of flight",
+    "Scroll of fireball", "Scroll of lightning", "Scroll of teleportation",
+    "Ancient book", "Spell tome", "Map", "Key", "Art object", "Statue",
+    "Painting", "Tapestry", "Musical instrument", "Fine weapon", "Fine armor",
+    "Rare component", "Exotic spice", "Perfume", "Silk cloth", "Masterwork item",
+    "Ancient artifact", "Religious relic", "Cursed item", "Trapped treasure"
+  ]
+}
