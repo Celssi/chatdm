@@ -14,7 +14,7 @@ import java.util.Map;
 public class BasicOracle {
 
     private String[] yesOrNoAnswers;
-    private Map likelihoodAnswers;
+    private Map<String, String[]> likelihoodAnswers;
 
     @PostConstruct
     public void init() throws IOException {
@@ -29,7 +29,7 @@ public class BasicOracle {
 
         // Load likelihood answers
         resource = new ClassPathResource("likelihood-answers.json");
-        likelihoodAnswers = mapper.readValue(resource.getInputStream(), Map.class);
+        likelihoodAnswers = mapper.readValue(resource.getInputStream(), typeRef);
     }
 
     @Tool(name = "ChatDM_yes_or_no", description = "Use this oracle when playing a rpg to determine an answer for yes or no questions.")
