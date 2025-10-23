@@ -17,7 +17,7 @@ public class Oracle {
     @PostConstruct
     public void init() throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        ClassPathResource resource = new ClassPathResource("oracle-answers.json");
+        ClassPathResource resource = new ClassPathResource("yes-or-no-answers.json");
         Map<String, String[]> data = mapper.readValue(resource.getInputStream(), Map.class);
         yesOrNoAnswers = data.get("yesOrNoAnswers");
     }
