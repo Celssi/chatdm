@@ -16,7 +16,17 @@ public class ChatDmApplication {
     }
 
     @Bean
-    public List<ToolCallback> oracles(Oracle tool) {
-        return List.of(ToolCallbacks.from(tool));
+    public List<ToolCallback> oracles(Oracle oracle,
+                                       NpcOracle npcOracle,
+                                       SceneOracle sceneOracle,
+                                       NarrativeOracle narrativeOracle,
+                                       DungeonOracle dungeonOracle) {
+        return List.of(
+                ToolCallbacks.from(oracle),
+                ToolCallbacks.from(npcOracle),
+                ToolCallbacks.from(sceneOracle),
+                ToolCallbacks.from(narrativeOracle),
+                ToolCallbacks.from(dungeonOracle)
+        );
     }
 }
