@@ -20,13 +20,15 @@ public class ChatDmApplication {
                                        NpcOracle npcOracle,
                                        SceneOracle sceneOracle,
                                        NarrativeOracle narrativeOracle,
-                                       DungeonOracle dungeonOracle) {
+                                       DungeonOracle dungeonOracle,
+                                       ConversationOracle conversationOracle) {
         return List.of(
                 ToolCallbacks.from(oracle),
                 ToolCallbacks.from(npcOracle),
                 ToolCallbacks.from(sceneOracle),
                 ToolCallbacks.from(narrativeOracle),
-                ToolCallbacks.from(dungeonOracle)
+                ToolCallbacks.from(dungeonOracle),
+                ToolCallbacks.from(conversationOracle)
         );
     }
 }
