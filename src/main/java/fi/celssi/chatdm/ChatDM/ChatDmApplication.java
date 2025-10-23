@@ -18,10 +18,10 @@ public class ChatDmApplication {
     public class McpConfig {
 
         @Bean
-        public ToolCallbackProvider toolCallbackProvider(DungeonOracle dungeonOracle, NarrativeOracle narrativeOracle, NpcOracle npcOracle, SceneOracle sceneOracle, BasicOracle basicOracle, ConversationOracle conversationOracle) {
+        public ToolCallbackProvider toolCallbackProvider(DungeonOracle dungeonOracle, NarrativeOracle narrativeOracle, NpcOracle npcOracle, SceneOracle sceneOracle, BasicOracle basicOracle, ConversationOracle conversationOracle, CardOracle cardOracle) {
             return MethodToolCallbackProvider
                     .builder()
-                    .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle, basicOracle, conversationOracle)
+                    .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle, basicOracle, conversationOracle, cardOracle)
                     .build();
         }
     }
