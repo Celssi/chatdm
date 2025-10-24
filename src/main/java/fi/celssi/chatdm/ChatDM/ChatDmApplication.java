@@ -15,7 +15,7 @@ public class ChatDmApplication {
     }
 
     @Configuration
-    public class McpConfig {
+    public static class McpConfig {
 
         @Bean
         public ToolCallbackProvider toolCallbackProvider(DungeonOracle dungeonOracle, NarrativeOracle narrativeOracle, NpcOracle npcOracle, SceneOracle sceneOracle, BasicOracle basicOracle, ConversationOracle conversationOracle, CardOracle cardOracle, ResourceOracle resourceOracle) {
