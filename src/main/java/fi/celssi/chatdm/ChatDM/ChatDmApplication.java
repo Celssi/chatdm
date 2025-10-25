@@ -18,10 +18,10 @@ public class ChatDmApplication {
     public static class McpConfig {
 
         @Bean
-        public ToolCallbackProvider toolCallbackProvider(DungeonOracle dungeonOracle, NarrativeOracle narrativeOracle, NpcOracle npcOracle, SceneOracle sceneOracle, BasicOracle basicOracle, ConversationOracle conversationOracle, CardOracle cardOracle, ResourceOracle resourceOracle) {
+        public ToolCallbackProvider toolCallbackProvider(DungeonOracle dungeonOracle, NarrativeOracle narrativeOracle, NpcOracle npcOracle, SceneOracle sceneOracle, BasicOracle basicOracle, ConversationOracle conversationOracle, CardOracle cardOracle, GameResourceOracle gameResourceOracle, JournalOracle journalOracle, BrambletrekPromptsOracle brambletrekPromptsOracle, MyLittlePonyPromptsOracle myLittlePonyPromptsOracle) {
             return MethodToolCallbackProvider
                     .builder()
-                    .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle, basicOracle, conversationOracle, cardOracle, resourceOracle)
+                    .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle, basicOracle, conversationOracle, cardOracle, gameResourceOracle, journalOracle, brambletrekPromptsOracle, myLittlePonyPromptsOracle)
                     .build();
         }
     }

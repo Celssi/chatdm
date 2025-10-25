@@ -6,8 +6,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -15,113 +13,156 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-public class ResourceOracle {
+public class GameResourceOracle {
 
-    private Map<String, ResourceInfo> resources;
-
-    public static class ResourceInfo {
-        public String name;
-        public String path;
-        public String type; // "core" or "adventure"
-        public String description;
-
-        public ResourceInfo(String name, String path, String type, String description) {
-            this.name = name;
-            this.path = path;
-            this.description = description;
-            this.type = type;
-        }
-    }
-
-    public static class SearchResult {
-        public String resourceName;
-        public int pageNumber;
-        public String context;
-
-        public SearchResult(String resourceName, int pageNumber, String context) {
-            this.resourceName = resourceName;
-            this.pageNumber = pageNumber;
-            this.context = context;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("[%s - Page %d] ...%s...", resourceName, pageNumber, context);
-        }
-    }
+    private Map<String, GameSystem> gameSystems;
+    private Map<String, ResourceInfo> resources; // Flattened view for backward compatibility
 
     @PostConstruct
     public void init() throws IOException {
+        gameSystems = new HashMap<>();
         resources = new HashMap<>();
 
-        // Register Brambletrek resources
-        resources.put("brambletrek-core", new ResourceInfo(
+        // Register Brambletrek game system
+        registerBrambletrek();
+
+        // Register My Little Pony RPG game system
+        registerMyLittlePony();
+    }
+
+    private void registerBrambletrek() {
+        GameSystem brambletrek = new GameSystem(
+                "brambletrek",
+                "Brambletrek",
+                "A woodland creatures RPG about tiny animals on big adventures"
+        );
+
+        // Add Brambletrek resources
+        addGameResource(brambletrek, "core", new ResourceInfo(
                 "Brambletrek Core Rules",
                 "pdfs/brambletrek/Brambletrek_-_Complete_Digital_Edition.pdf",
                 "core",
-                "Complete core rulebook with basic adventures"
+                "Complete core rulebook with basic adventures",
+                "brambletrek"
         ));
 
-        resources.put("brambletrek-birthday", new ResourceInfo(
+        addGameResource(brambletrek, "birthday", new ResourceInfo(
                 "A Birthday of Wonders",
                 "pdfs/brambletrek/Brambletrek_-_A_Birthday_of_Wonders.pdf",
                 "adventure",
-                "Brambletrek adventure module"
+                "Brambletrek adventure module",
+                "brambletrek"
         ));
 
-        resources.put("brambletrek-pumpkin", new ResourceInfo(
+        addGameResource(brambletrek, "pumpkin", new ResourceInfo(
                 "The Pumpkin Party",
                 "pdfs/brambletrek/Brambletrek_-_The_Pumpkin_Party.pdf",
                 "adventure",
-                "Brambletrek adventure module"
+                "Brambletrek adventure module",
+                "brambletrek"
         ));
 
-        resources.put("brambletrek-frost", new ResourceInfo(
+        addGameResource(brambletrek, "frost", new ResourceInfo(
                 "The Warmth of the First Frost",
                 "pdfs/brambletrek/Brambletrek_-_The_Warmth_of_the_First_Frost.pdf",
                 "adventure",
-                "Brambletrek adventure module"
+                "Brambletrek adventure module",
+                "brambletrek"
         ));
+
+        gameSystems.put("brambletrek", brambletrek);
+    }
+
+    private void registerMyLittlePony() {
+        GameSystem mlp = new GameSystem(
+                "my-little-pony",
+                "My Little Pony Roleplaying Game",
+                "A friendship-powered RPG using the Essence20 system"
+        );
+
+        // Add My Little Pony resources
+        addGameResource(mlp, "core", new ResourceInfo(
+                "My Little Pony Core Rulebook",
+                "pdfs/my-little-pony/My_Little_Pony_-_Core_Rulebook.pdf",
+                "core",
+                "Complete core rulebook for the My Little Pony RPG",
+                "my-little-pony"
+        ));
+
+        addGameResource(mlp, "knights", new ResourceInfo(
+                "Knights of Canterlot",
+                "pdfs/my-little-pony/My_Little_Pony_-_Knights_of_Canterlot.pdf",
+                "adventure",
+                "My Little Pony adventure module",
+                "my-little-pony"
+        ));
+
+        addGameResource(mlp, "seasons", new ResourceInfo(
+                "Story of the Seasons",
+                "pdfs/my-little-pony/My_Little_Pony_-_Story_of_the_Seasons.pdf",
+                "adventure",
+                "My Little Pony adventure module",
+                "my-little-pony"
+        ));
+
+        gameSystems.put("my-little-pony", mlp);
+    }
+
+    private void addGameResource(GameSystem gameSystem, String resourceKey, ResourceInfo resource) {
+        String fullResourceId = gameSystem.getId() + "-" + resourceKey;
+        gameSystem.addResource(fullResourceId, resource);
+        resources.put(fullResourceId, resource);
     }
 
     @Tool(name = "ChatDM_list_resources", description = """
-            List all available RPG resources (rulebooks and adventures).
-            Returns information about each resource including name, type, and description.
+            List all available RPG resources (rulebooks and adventures) across all game systems.
+            Returns information about each resource including game system, name, type, and description.
             """)
     public String listResources() {
-        StringBuilder result = new StringBuilder("Available Resources:\n\n");
+        StringBuilder result = new StringBuilder("Available Game Systems and Resources:\n\n");
 
-        // Group by type
-        Map<String, List<ResourceInfo>> byType = resources.values().stream()
-                .collect(Collectors.groupingBy(r -> r.type));
+        for (GameSystem gameSystem : gameSystems.values()) {
+            result.append(String.format("=== %s ===\n", gameSystem.getName()));
+            result.append(String.format("%s\n\n", gameSystem.getDescription()));
 
-        if (byType.containsKey("core")) {
-            result.append("CORE RULEBOOKS:\n");
-            for (ResourceInfo info : byType.get("core")) {
-                result.append(String.format("  - %s\n    Description: %s\n\n",
-                        info.name, info.description));
+            // Group resources by type
+            Map<String, List<ResourceInfo>> byType = gameSystem.getResources().values().stream()
+                    .collect(Collectors.groupingBy(r -> r.type));
+
+            if (byType.containsKey("core")) {
+                result.append("CORE RULEBOOKS:\n");
+                for (Map.Entry<String, ResourceInfo> entry : gameSystem.getResources().entrySet()) {
+                    if (entry.getValue().type.equals("core")) {
+                        result.append(String.format("  - %s [ID: %s]\n    Description: %s\n\n",
+                                entry.getValue().name, entry.getKey(), entry.getValue().description));
+                    }
+                }
             }
-        }
 
-        if (byType.containsKey("adventure")) {
-            result.append("ADVENTURES:\n");
-            for (ResourceInfo info : byType.get("adventure")) {
-                result.append(String.format("  - %s\n    Description: %s\n\n",
-                        info.name, info.description));
+            if (byType.containsKey("adventure")) {
+                result.append("ADVENTURES:\n");
+                for (Map.Entry<String, ResourceInfo> entry : gameSystem.getResources().entrySet()) {
+                    if (entry.getValue().type.equals("adventure")) {
+                        result.append(String.format("  - %s [ID: %s]\n    Description: %s\n\n",
+                                entry.getValue().name, entry.getKey(), entry.getValue().description));
+                    }
+                }
             }
+
+            result.append("\n");
         }
 
         return result.toString();
     }
 
     @Tool(name = "ChatDM_search_resource", description = """
-            Search for text within a specific resource or across all resources.
+            Search for text within a specific resource or across all resources in all game systems.
             Parameters:
             - query: The text to search for (required)
-            - resourceName: Optional. Leave empty to search all resources, or specify one of:
-              'brambletrek-core', 'brambletrek-birthday', 'brambletrek-pumpkin', 'brambletrek-frost'
+            - resourceName: Optional. Leave empty to search all resources, or specify a resource ID.
+              Use ChatDM_list_resources to see available resource IDs.
             - maxResults: Optional. Maximum number of results to return (default: 5)
-
+            
             Returns search results with page numbers and text context.
             """)
     public String searchResource(String query, String resourceName, Integer maxResults) {
@@ -176,10 +217,10 @@ public class ResourceOracle {
     @Tool(name = "ChatDM_get_page", description = """
             Get the text content from a specific page of a resource.
             Parameters:
-            - resourceName: Required. One of: 'brambletrek-core', 'brambletrek-birthday',
-              'brambletrek-pumpkin', 'brambletrek-frost'
+            - resourceName: Required. The resource ID to read from.
+              Use ChatDM_list_resources to see available resource IDs.
             - pageNumber: Required. The page number to retrieve (1-indexed)
-
+            
             Returns the text content of the specified page.
             """)
     public String getPage(String resourceName, int pageNumber) {
@@ -254,5 +295,42 @@ public class ResourceOracle {
         context = context.replaceAll("\\s+", " ").trim();
 
         return context;
+    }
+
+    public static class ResourceInfo {
+        public String name;
+        public String path;
+        public String type; // "core" or "adventure"
+        public String description;
+        public String gameSystemId; // Reference to parent game system
+
+        public ResourceInfo(String name, String path, String type, String description) {
+            this(name, path, type, description, null);
+        }
+
+        public ResourceInfo(String name, String path, String type, String description, String gameSystemId) {
+            this.name = name;
+            this.path = path;
+            this.description = description;
+            this.type = type;
+            this.gameSystemId = gameSystemId;
+        }
+    }
+
+    public static class SearchResult {
+        public String resourceName;
+        public int pageNumber;
+        public String context;
+
+        public SearchResult(String resourceName, int pageNumber, String context) {
+            this.resourceName = resourceName;
+            this.pageNumber = pageNumber;
+            this.context = context;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("[%s - Page %d] ...%s...", resourceName, pageNumber, context);
+        }
     }
 }
