@@ -28,6 +28,9 @@ public class GameResourceOracle {
 
         // Register My Little Pony RPG game system
         registerMyLittlePony();
+
+        // Register D&D 5e 2024 game system
+        registerDnD5e2024();
     }
 
     private void registerBrambletrek() {
@@ -106,6 +109,73 @@ public class GameResourceOracle {
         ));
 
         gameSystems.put("my-little-pony", mlp);
+    }
+
+    private void registerDnD5e2024() {
+        GameSystem dnd = new GameSystem(
+                "dnd-5e-2024",
+                "Dungeons & Dragons 5th Edition (2024)",
+                "The world's greatest roleplaying game - 2024 edition with updated rules"
+        );
+
+        // Add D&D 5e 2024 core books
+        addGameResource(dnd, "phb", new ResourceInfo(
+                "Player's Handbook (2024)",
+                "pdfs/dnd/players_handbook.pdf",
+                "core",
+                "Complete player's handbook with character creation, classes, spells, and rules",
+                "dnd-5e-2024"
+        ));
+
+        addGameResource(dnd, "dmg", new ResourceInfo(
+                "Dungeon Master's Guide (2024)",
+                "pdfs/dnd/dungeon_masters_guide.pdf",
+                "core",
+                "Comprehensive guide for Dungeon Masters with world-building, treasure, and DMing advice",
+                "dnd-5e-2024"
+        ));
+
+        addGameResource(dnd, "mm", new ResourceInfo(
+                "Monster Manual (2024)",
+                "pdfs/dnd/monster_manual.pdf",
+                "core",
+                "Extensive bestiary with hundreds of monsters, stat blocks, and lore",
+                "dnd-5e-2024"
+        ));
+
+        addGameResource(dnd, "tasha", new ResourceInfo(
+                "Tasha's Cauldron of Everything",
+                "pdfs/dnd/tashas_cauldron_of_everything.pdf",
+                "core",
+                "Expanded rules for character options, spells, and magical items",
+                "dnd-5e-2024"
+        ));
+
+        addGameResource(dnd, "xanathar", new ResourceInfo(
+                "Xanathar's Guide to Everything",
+                "pdfs/dnd/xanathars_guide_to_everything.pdf",
+                "core",
+                "Additional character options, spells, and DM tools",
+                "dnd-5e-2024"
+        ));
+
+        addGameResource(dnd, "xanathar-lost", new ResourceInfo(
+                "Xanathar's Lost Notes to Everything Else",
+                "pdfs/dnd/xanathars_lost_notes.pdf",
+                "core",
+                "Unofficial supplement with additional character options and rules",
+                "dnd-5e-2024"
+        ));
+
+        addGameResource(dnd, "dragons", new ResourceInfo(
+                "The Book of Dragons",
+                "pdfs/dnd/book_of_dragons.pdf",
+                "core",
+                "Comprehensive guide to dragons in D&D lore and gameplay",
+                "dnd-5e-2024"
+        ));
+
+        gameSystems.put("dnd-5e-2024", dnd);
     }
 
     private void addGameResource(GameSystem gameSystem, String resourceKey, ResourceInfo resource) {
