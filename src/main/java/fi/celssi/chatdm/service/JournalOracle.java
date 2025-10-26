@@ -1,4 +1,4 @@
-package fi.celssi.chatdm.ChatDM;
+package fi.celssi.chatdm.service;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.ai.tool.annotation.Tool;

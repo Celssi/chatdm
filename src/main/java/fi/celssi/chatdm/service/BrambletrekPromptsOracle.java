@@ -1,4 +1,4 @@
-package fi.celssi.chatdm.ChatDM;
+package fi.celssi.chatdm.service;
 
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
