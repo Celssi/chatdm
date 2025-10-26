@@ -38,16 +38,23 @@ public class GameResourceOracle {
 
         addResource(system, "core", "Brambletrek Core Rules",
                 "pdfs/brambletrek/Brambletrek_-_Complete_Digital_Edition.pdf",
-                "core", "Complete core rulebook with basic adventures");
+                "core",
+                "The complete rulebook for Brambletrek, a cozy solo journaling RPG set in the woodland world of Hyhill. Create a Gnawborn wanderer and explore the quiet magic of the forest through card prompts, seasonal festivals, and heartfelt storytelling. Includes full rules, lore, and starter adventures.");
+
         addResource(system, "birthday", "A Birthday of Wonders",
                 "pdfs/brambletrek/Brambletrek_-_A_Birthday_of_Wonders.pdf",
-                "adventure", "Brambletrek adventure module");
+                "adventure",
+                "Celebrate Brambletrek’s founding in this heartwarming adventure where the Gnawborn, Bristleborn, and Bushborn gather for the village’s grand anniversary. Join Bramble on a journey to find the perfect birthday gift—a quest that reveals the meaning of kinship, memory, and home.");
+
         addResource(system, "pumpkin", "The Pumpkin Party",
                 "pdfs/brambletrek/Brambletrek_-_The_Pumpkin_Party.pdf",
-                "adventure", "Brambletrek adventure module");
+                "adventure",
+                "An autumn festival adventure steeped in Gnawborn tradition. Prepare for the annual Pumpkin Party—a glowing celebration of harvest, memory, and community. Carve, bake, and celebrate under lantern light as old spirits stir among the vines and the forest comes alive with story and song.");
+
         addResource(system, "frost", "The Warmth of the First Frost",
                 "pdfs/brambletrek/Brambletrek_-_The_Warmth_of_the_First_Frost.pdf",
-                "adventure", "Brambletrek adventure module");
+                "adventure",
+                "A winter tale of unity and mystery. As the First Frost arrives in Hyhill, the forest gathers around the Grand Frostfire to celebrate and remember. Beneath the snow lie ancient secrets waiting to be uncovered, as you join the Gnawborn, Bristleborn, and Bushborn in a season of wonder and renewal.");
     }
 
     private void registerMyLittlePony() {
@@ -56,13 +63,18 @@ public class GameResourceOracle {
 
         addResource(system, "core", "My Little Pony Core Rulebook",
                 "pdfs/my-little-pony/My_Little_Pony_-_Core_Rulebook.pdf",
-                "core", "Complete core rulebook for the My Little Pony RPG");
+                "core",
+                "The complete rulebook for the My Little Pony Roleplaying Game. Create your own pony hero, explore Equestria, and tell stories of friendship and adventure using the Essence20 system. Includes full character creation, magic, equipment, creatures, and an introductory adventure.");
+
         addResource(system, "knights", "Knights of Canterlot",
                 "pdfs/my-little-pony/My_Little_Pony_-_Knights_of_Canterlot.pdf",
-                "adventure", "My Little Pony adventure module");
+                "supplement",
+                "A fantasy expansion transforming the My Little Pony RPG into an epic quest across Equestria. Features new Influences, spells, magical items, and Threats, plus the full adventure 'The Mares of Malevolence.' Join the secret order of the Knights of Canterlot to defend harmony and uncover ancient mysteries.");
+
         addResource(system, "seasons", "Story of the Seasons",
                 "pdfs/my-little-pony/My_Little_Pony_-_Story_of_the_Seasons.pdf",
-                "adventure", "My Little Pony adventure module");
+                "adventure",
+                "A year-long sourcebook of Ponyville festivals and seasonal stories. Includes four adventures—one for each season—along with rules for downtime, new Griffon origins, and a detailed gazetteer of Ponyville. Celebrate friendship and fun through the turning of the seasons in Equestria.");
     }
 
     private void registerDnD5e2024() {
@@ -71,25 +83,31 @@ public class GameResourceOracle {
 
         addResource(system, "phb", "Player's Handbook (2024)",
                 "pdfs/dnd/players_handbook.pdf", "core",
-                "Complete player's handbook with character creation, classes, spells, and rules");
+                "The essential rulebook for all players. Includes complete rules for character creation, combat, adventuring, and spellcasting, alongside detailed lore for every class, race, and background in the 2024 edition of Dungeons & Dragons.");
+
         addResource(system, "dmg", "Dungeon Master's Guide (2024)",
                 "pdfs/dnd/dungeon_masters_guide.pdf", "core",
-                "Comprehensive guide for Dungeon Masters with world-building, treasure, and DMing advice");
+                "The ultimate guide for Dungeon Masters. Offers world-building advice, encounter creation tools, treasure tables, and optional rules to help you craft unforgettable adventures and campaigns.");
+
         addResource(system, "mm", "Monster Manual (2024)",
                 "pdfs/dnd/monster_manual.pdf", "core",
-                "Extensive bestiary with hundreds of monsters, stat blocks, and lore");
+                "A vast bestiary of Dungeons & Dragons creatures, from goblins and dragons to celestial beings and fiends. Includes lore, stat blocks, and inspiration for encounters and storytelling.");
+
         addResource(system, "tasha", "Tasha's Cauldron of Everything",
-                "pdfs/dnd/tashas_cauldron_of_everything.pdf", "core",
-                "Expanded rules for character options, spells, and magical items");
+                "pdfs/dnd/tashas_cauldron_of_everything.pdf", "supplement",
+                "An expansion of magical creativity and versatility. Introduces new subclasses, spells, magic items, and rules for group patrons, sidekicks, and supernatural regions—curated with wit and wisdom by the archmage Tasha herself.");
+
         addResource(system, "xanathar", "Xanathar's Guide to Everything",
-                "pdfs/dnd/xanathars_guide_to_everything.pdf", "core",
-                "Additional character options, spells, and DM tools");
+                "pdfs/dnd/xanathars_guide_to_everything.pdf", "supplement",
+                "A treasure trove of expanded options for players and DMs alike, featuring new subclasses, spells, downtime activities, and guidance for running rich, character-driven campaigns, all through the eyes of Waterdeep’s most infamous beholder.");
+
         addResource(system, "xanathar-lost", "Xanathar's Lost Notes to Everything Else",
-                "pdfs/dnd/xanathars_lost_notes.pdf", "core",
-                "Unofficial supplement with additional character options and rules");
+                "pdfs/dnd/xanathars_lost_notes.pdf", "supplement",
+                "A DM’s Guild Adepts companion to Xanathar’s Guide, offering dozens of new subclasses, backgrounds, races, and rules modules. Blends player options with story-driven lore from the darker corners of the multiverse.");
+
         addResource(system, "dragons", "The Book of Dragons",
-                "pdfs/dnd/book_of_dragons.pdf", "core",
-                "Comprehensive guide to dragons in D&D lore and gameplay");
+                "pdfs/dnd/book_of_dragons.pdf", "supplement",
+                "An expansive guide to dragonkind across the worlds of D&D. Details draconic lore, physiology, and psychology, alongside lair designs, hoards, new dragon types, and tools for creating legendary dragon encounters.");
     }
 
     private void registerTheOneRing() {
@@ -98,37 +116,47 @@ public class GameResourceOracle {
 
         addResource(system, "core", "Core Rulebook",
                 "pdfs/lotr/core_rulebook.pdf", "core",
-                "Complete core rulebook for The One Ring 2nd Edition");
+                "The definitive guide to The One Ring 2nd Edition. Contains the full rules, setting of Eriador, and guidance for both Players and Loremasters to explore Middle-earth in the Twilight of the Third Age.");
+
         addResource(system, "loremasters-screen", "Loremaster's Screen",
                 "pdfs/lotr/loremasters_screen.pdf", "core",
-                "Reference screen with quick rules and tables for Loremasters");
+                "A handy reference for Loremasters, featuring quick-access tables for combat, journeys, councils, risk levels, and sources of injury, making play faster and smoother.");
+
         addResource(system, "character-lifepaths", "Character Lifepaths",
                 "pdfs/lotr/character_lifepaths.pdf", "supplement",
-                "Expanded character creation options and background lifepaths");
+                "Generate unique backstories for your heroes with lifepaths tied to each culture. Includes optional attributes, favoured skills, and distinctive features to enrich character creation.");
+
         addResource(system, "moria", "Moria - Through The Doors of Durin",
                 "pdfs/lotr/moria.pdf", "setting",
-                "Adventure in the depths of Moria, the ancient Dwarven kingdom");
+                "An expansive campaign sourcebook exploring the dark depths of Khazad-dûm. Includes history, lore, maps, and adventures within the Dwarrowdelf — plus options for solo and group play.");
+
         addResource(system, "peoples-of-wilderland", "Peoples of Wilderland",
                 "pdfs/lotr/peoples_of_wilderland.pdf", "setting",
-                "Expanded lore and rules for the peoples of Wilderland");
+                "Details the cultures of the northern lands — Beornings, Woodmen, Elves, and Dwarves — with new blessings, virtues, and backgrounds expanding your hero creation options.");
+
         addResource(system, "ruins-lost-realm", "Ruins of the Lost Realm",
                 "pdfs/lotr/ruins_of_the_lost_realm.pdf", "setting",
-                "Explore the ruins and secrets of Arnor, the lost realm of the North");
+                "A setting guide to southern Eriador, exploring Tharbad, Lond Daer, and the forgotten lands of Cardolan and Minhiriath. Includes twelve detailed landmarks, characters, and threats rising in the West.");
+
         addResource(system, "tales-lone-lands", "Tales from the Lone-lands",
                 "pdfs/lotr/tales_from_the_lone_lands.pdf", "adventure",
-                "Collection of adventures set in the Lone-lands of Eriador");
+                "Six linked adventures set across the wilds of Eriador, from Bree to the ruins of Angmar. Uncover ancient evils, forgotten lineages, and the growing shadow of Mordor in the North.");
+
         addResource(system, "strider-mode", "Strider Mode",
                 "pdfs/lotr/strider_mode.pdf", "core",
-                "Solo play rules and adventure for playing The One Ring without a Loremaster");
+                "Rules for solo play inspired by Aragorn’s wandering years. Includes oracles, tables, and guidance to explore Middle-earth alone or cooperatively without a Loremaster.");
+
         addResource(system, "starter-adventures", "Starter Set - The Adventures",
                 "pdfs/lotr/starter_set_adventures.pdf", "adventure",
-                "Introductory adventures from the starter set");
+                "Five introductory adventures set in the Shire, featuring Bilbo and his Hobbit kin. A perfect starting point for new players to experience gentle heroism and quiet peril.");
+
         addResource(system, "starter-rules", "Starter Set - The Rules",
                 "pdfs/lotr/starter_set_rules.pdf", "core",
-                "Simplified rules from the starter set for new players");
+                "Streamlined rules and examples of play introducing The One Ring’s core mechanics. Ideal for learning the system and guiding new adventurers through their first journeys.");
+
         addResource(system, "starter-shire", "Starter Set - The Shire",
                 "pdfs/lotr/starter_set_shire.pdf", "setting",
-                "Introduction to adventuring in the Shire");
+                "A richly detailed gazetteer of the Shire with maps, customs, and local tales. Serves as a peaceful yet lively setting for early adventures in the heart of Hobbiton.");
     }
 
     private GameSystem createGameSystem(String id, String name, String description) {
@@ -189,7 +217,7 @@ public class GameResourceOracle {
             - resourceName: Optional. Leave empty to search all resources, or specify a resource ID.
               Use ChatDM_list_resources to see available resource IDs.
             - maxResults: Optional. Maximum number of results to return (default: 5)
-
+            
             Returns search results with page numbers and text context.
             """)
     public String searchResource(String query, String resourceName, Integer maxResults) {

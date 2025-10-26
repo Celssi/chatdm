@@ -31,13 +31,14 @@ public class ChatDmApplication {
                 JournalOracle journalOracle,
                 BrambletrekPromptsOracle brambletrekPromptsOracle,
                 MyLittlePonyPromptsOracle myLittlePonyPromptsOracle,
-                DnDPromptsOracle dndPromptsOracle) {
+                DnDPromptsOracle dndPromptsOracle,
+                TheOneRingPromptsOracle theOneRingPromptsOracle) {
             return MethodToolCallbackProvider
                     .builder()
                     .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle,
                             basicOracle, conversationOracle, cardOracle, gameResourceOracle,
                             journalOracle, brambletrekPromptsOracle, myLittlePonyPromptsOracle,
-                            dndPromptsOracle)
+                            dndPromptsOracle, theOneRingPromptsOracle)
                     .build();
         }
     }
