@@ -21,6 +21,8 @@ public class JournalOracle {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final Path charactersDir;
     private final Path adventuresDir;
+    private final Path npcsDir;
+    private final Path plotsDir;
 
     public JournalOracle() {
         // Use user home directory to avoid permission issues
@@ -28,6 +30,8 @@ public class JournalOracle {
         Path baseDir = Paths.get(userHome, ".chatdm", "journal");
         this.charactersDir = baseDir.resolve("characters");
         this.adventuresDir = baseDir.resolve("adventures");
+        this.npcsDir = baseDir.resolve("npcs");
+        this.plotsDir = baseDir.resolve("plots");
     }
 
     @PostConstruct
@@ -35,6 +39,8 @@ public class JournalOracle {
         // Create directories if they don't exist
         Files.createDirectories(charactersDir);
         Files.createDirectories(adventuresDir);
+        Files.createDirectories(npcsDir);
+        Files.createDirectories(plotsDir);
     }
 
     @Tool(name = "ChatDM_save_character", description = """
@@ -259,6 +265,373 @@ public class JournalOracle {
             }
         } catch (IOException e) {
             return "Error listing adventures: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_save_npc", description = """
+            Save an NPC to the catalog for an adventure.
+            
+            WHEN TO USE: When introducing a new NPC that players might interact with again.
+            
+            Parameters:
+            - adventureName: Required. The name of the adventure this NPC belongs to
+            - npcName: Required. The name of the NPC
+            - npcData: Required. Comprehensive NPC information including:
+              * Physical Description: Age, appearance, clothing, distinctive features
+              * Personality: Traits, quirks, speech patterns, mannerisms
+              * Motivations: Goals, fears, desires, what drives them
+              * Background: Occupation, history, relationships, secrets
+              * Role in Story: How they fit into the adventure/campaign
+              * Relationships: Connections to other NPCs, factions, locations
+              * Current Status: Where they are, what they're doing, mood
+            
+            EXAMPLE npcData:
+            "Elder Willow - Ancient tree spirit, appears as weathered oak with wise eyes.
+            Speaks slowly with rustling leaves. Motivated by protecting the grove from corruption.
+            Knows ancient secrets about the forest curse. Currently worried about dark magic spreading.
+            Allies with the druid circle, enemies of the shadow cult."
+            
+            The NPC will be saved as a .txt file linked to the adventure.
+            """)
+    public String saveNpc(String adventureName, String npcName, String npcData) {
+        if (adventureName == null || adventureName.trim().isEmpty()) {
+            return "Error: Adventure name is required";
+        }
+        if (npcName == null || npcName.trim().isEmpty()) {
+            return "Error: NPC name is required";
+        }
+        if (npcData == null || npcData.trim().isEmpty()) {
+            return "Error: NPC data is required";
+        }
+
+        try {
+            String sanitizedAdventure = sanitizeFilename(adventureName);
+            String sanitizedNpc = sanitizeFilename(npcName);
+            Path npcPath = npcsDir.resolve(sanitizedAdventure + "_" + sanitizedNpc + ".txt");
+
+            String content = String.format("""
+                    ADVENTURE: %s
+                    NPC: %s
+                    CREATED: %s
+                    LAST_UPDATED: %s
+
+                    %s
+                    """, adventureName, npcName, LocalDateTime.now().format(DATE_FORMAT), 
+                    LocalDateTime.now().format(DATE_FORMAT), npcData);
+
+            Files.writeString(npcPath, content);
+            return String.format("NPC '%s' saved for adventure '%s'", npcName, adventureName);
+        } catch (IOException e) {
+            return "Error saving NPC: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_load_npc", description = """
+            Load an NPC from the catalog to maintain consistency.
+            
+            WHEN TO USE: Before NPC interactions to ensure consistent portrayal.
+            
+            Parameters:
+            - adventureName: Required. The name of the adventure
+            - npcName: Required. The name of the NPC to load
+
+            Returns the complete NPC data from the file for reference during roleplay.
+            """)
+    public String loadNpc(String adventureName, String npcName) {
+        if (adventureName == null || adventureName.trim().isEmpty()) {
+            return "Error: Adventure name is required";
+        }
+        if (npcName == null || npcName.trim().isEmpty()) {
+            return "Error: NPC name is required";
+        }
+
+        try {
+            String sanitizedAdventure = sanitizeFilename(adventureName);
+            String sanitizedNpc = sanitizeFilename(npcName);
+            Path npcPath = npcsDir.resolve(sanitizedAdventure + "_" + sanitizedNpc + ".txt");
+
+            if (!Files.exists(npcPath)) {
+                return String.format("Error: NPC '%s' not found for adventure '%s'. Use ChatDM_list_npcs to see available NPCs.", npcName, adventureName);
+            }
+
+            return Files.readString(npcPath);
+        } catch (IOException e) {
+            return "Error loading NPC: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_update_npc", description = """
+            Update an existing NPC in the catalog.
+            
+            WHEN TO USE: When NPC status changes significantly:
+            - After major story events affecting the NPC
+            - When relationships with PCs evolve
+            - If motivations or allegiances shift
+            - When NPC gains/loses important information
+            - After combat or traumatic experiences
+            
+            Parameters:
+            - adventureName: Required. The name of the adventure
+            - npcName: Required. The name of the NPC to update
+            - npcData: Required. Complete updated NPC information (not just changes)
+            
+            IMPORTANT: Provide the full updated NPC data, not just what changed.
+            This ensures the NPC file remains complete and self-contained.
+            
+            Updates the NPC data and timestamp while preserving creation date.
+            """)
+    public String updateNpc(String adventureName, String npcName, String npcData) {
+        if (adventureName == null || adventureName.trim().isEmpty()) {
+            return "Error: Adventure name is required";
+        }
+        if (npcName == null || npcName.trim().isEmpty()) {
+            return "Error: NPC name is required";
+        }
+        if (npcData == null || npcData.trim().isEmpty()) {
+            return "Error: NPC data is required";
+        }
+
+        try {
+            String sanitizedAdventure = sanitizeFilename(adventureName);
+            String sanitizedNpc = sanitizeFilename(npcName);
+            Path npcPath = npcsDir.resolve(sanitizedAdventure + "_" + sanitizedNpc + ".txt");
+
+            if (!Files.exists(npcPath)) {
+                return String.format("Error: NPC '%s' not found for adventure '%s'. Use ChatDM_save_npc to create a new NPC.", npcName, adventureName);
+            }
+
+            // Read existing content to preserve creation date
+            String existingContent = Files.readString(npcPath);
+            String createdDate = extractValue(existingContent, "CREATED:");
+
+            String content = String.format("""
+                    ADVENTURE: %s
+                    NPC: %s
+                    CREATED: %s
+                    LAST_UPDATED: %s
+
+                    %s
+                    """, adventureName, npcName, createdDate, 
+                    LocalDateTime.now().format(DATE_FORMAT), npcData);
+
+            Files.writeString(npcPath, content);
+            return String.format("NPC '%s' updated for adventure '%s'", npcName, adventureName);
+        } catch (IOException e) {
+            return "Error updating NPC: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_list_npcs", description = """
+            List all NPCs for a specific adventure or all NPCs.
+            
+            WHEN TO USE: 
+            - At session start to review available NPCs
+            - When planning encounters or interactions
+            - To check which NPCs exist before creating new ones
+            
+            Parameters:
+            - adventureName: Optional. If provided, lists NPCs for that adventure only
+
+            Returns a list of NPCs with their creation dates and adventure associations.
+            """)
+    public String listNpcs(String adventureName) {
+        try {
+            Path npcsPath = npcsDir;
+
+            if (!Files.exists(npcsPath)) {
+                return "No NPCs directory found.";
+            }
+
+            try (Stream<Path> paths = Files.list(npcsPath)) {
+                List<String> npcs = paths
+                        .filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith(".txt"))
+                        .map(path -> {
+                            try {
+                                String content = Files.readString(path);
+                                String adventure = extractValue(content, "ADVENTURE:");
+                                String npcName = extractValue(content, "NPC:");
+                                String created = extractValue(content, "CREATED:");
+                                
+                                // Filter by adventure if specified
+                                if (adventureName != null && !adventureName.trim().isEmpty()) {
+                                    String sanitizedAdventure = sanitizeFilename(adventureName);
+                                    String sanitizedFileAdventure = sanitizeFilename(adventure);
+                                    if (!sanitizedFileAdventure.equals(sanitizedAdventure)) {
+                                        return null;
+                                    }
+                                }
+                                
+                                return String.format("  - %s [%s] - Created: %s", npcName, adventure, created);
+                            } catch (IOException e) {
+                                return "  - " + path.getFileName().toString() + " [error reading]";
+                            }
+                        })
+                        .filter(npc -> npc != null)
+                        .sorted()
+                        .collect(Collectors.toList());
+
+                if (npcs.isEmpty()) {
+                    if (adventureName != null && !adventureName.trim().isEmpty()) {
+                        return String.format("No NPCs found for adventure '%s'.", adventureName);
+                    } else {
+                        return "No NPCs saved yet.";
+                    }
+                }
+
+                String header = adventureName != null && !adventureName.trim().isEmpty() 
+                    ? String.format("NPCs for Adventure '%s':\n", adventureName)
+                    : "All Saved NPCs:\n";
+                
+                return header + String.join("\n", npcs);
+            }
+        } catch (IOException e) {
+            return "Error listing NPCs: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_save_plot", description = """
+            Save or update the plot journal for an adventure.
+            
+            WHEN TO USE: 
+            - At adventure start to establish overarching story
+            - After major plot developments or revelations
+            - When story threads need to be connected
+            - Between sessions to maintain narrative continuity
+            - When introducing new story elements or complications
+            
+            Parameters:
+            - adventureName: Required. The name of the adventure
+            - plotData: Required. Comprehensive plot information including:
+              * Main Story Arc: Primary conflict, goals, stakes
+              * Subplots: Secondary storylines and character arcs
+              * Themes: Central themes and motifs
+              * Timeline: Key events, past and future
+              * Factions: Groups, their goals and relationships
+              * Secrets: Hidden information, mysteries, revelations
+              * Complications: Obstacles, twists, unexpected elements
+              * Future Hooks: Potential story directions, unresolved threads
+            
+            EXAMPLE plotData:
+            "The Mystic Forest Curse: Ancient evil spreading through the grove.
+            Main Arc: Stop the corruption before it reaches the village.
+            Subplots: Druid circle's internal conflict, lost temple discovery.
+            Themes: Nature vs corruption, sacrifice for protection.
+            Timeline: Curse started 100 years ago, accelerating recently.
+            Factions: Druids (protectors), Shadow Cult (corruptors), Village (victims).
+            Secrets: The curse is actually a trapped nature spirit.
+            Complications: PCs' actions may accelerate the curse.
+            Future Hooks: Other cursed locations, spirit's true nature."
+            
+            Creates or updates the plot file for the adventure.
+            """)
+    public String savePlot(String adventureName, String plotData) {
+        if (adventureName == null || adventureName.trim().isEmpty()) {
+            return "Error: Adventure name is required";
+        }
+        if (plotData == null || plotData.trim().isEmpty()) {
+            return "Error: Plot data is required";
+        }
+
+        try {
+            String sanitizedAdventure = sanitizeFilename(adventureName);
+            Path plotPath = plotsDir.resolve(sanitizedAdventure + "_plot.txt");
+
+            boolean isUpdate = Files.exists(plotPath);
+            String createdDate = isUpdate ? extractValue(Files.readString(plotPath), "CREATED:") : LocalDateTime.now().format(DATE_FORMAT);
+
+            String content = String.format("""
+                    ADVENTURE: %s
+                    CREATED: %s
+                    LAST_UPDATED: %s
+
+                    %s
+                    """, adventureName, createdDate, LocalDateTime.now().format(DATE_FORMAT), plotData);
+
+            Files.writeString(plotPath, content);
+            return String.format("Plot %s for adventure '%s'", isUpdate ? "updated" : "saved", adventureName);
+        } catch (IOException e) {
+            return "Error saving plot: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_load_plot", description = """
+            Load the plot journal for an adventure.
+            
+            WHEN TO USE:
+            - At session start to review story context
+            - When making story decisions or introducing plot elements
+            - To maintain consistency with established lore
+            - When connecting new events to existing storylines
+            
+            Parameters:
+            - adventureName: Required. The name of the adventure
+
+            Returns the complete plot data from the file for story reference.
+            """)
+    public String loadPlot(String adventureName) {
+        if (adventureName == null || adventureName.trim().isEmpty()) {
+            return "Error: Adventure name is required";
+        }
+
+        try {
+            String sanitizedAdventure = sanitizeFilename(adventureName);
+            Path plotPath = plotsDir.resolve(sanitizedAdventure + "_plot.txt");
+
+            if (!Files.exists(plotPath)) {
+                return String.format("Error: No plot found for adventure '%s'. Use ChatDM_save_plot to create one.", adventureName);
+            }
+
+            return Files.readString(plotPath);
+        } catch (IOException e) {
+            return "Error loading plot: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_list_plots", description = """
+            List all plot journals.
+            
+            WHEN TO USE:
+            - To review all ongoing storylines
+            - When planning cross-adventure connections
+            - To check which adventures have established plots
+            - During campaign planning sessions
+            
+            Returns a list of all adventures with plot journals and their last update dates.
+            """)
+    public String listPlots() {
+        try {
+            Path plotsPath = plotsDir;
+
+            if (!Files.exists(plotsPath)) {
+                return "No plots directory found.";
+            }
+
+            try (Stream<Path> paths = Files.list(plotsPath)) {
+                List<String> plots = paths
+                        .filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith("_plot.txt"))
+                        .map(path -> {
+                            try {
+                                String content = Files.readString(path);
+                                String adventure = extractValue(content, "ADVENTURE:");
+                                String lastUpdated = extractValue(content, "LAST_UPDATED:");
+                                return String.format("  - %s - Last Updated: %s", adventure, lastUpdated);
+                            } catch (IOException e) {
+                                return "  - " + path.getFileName().toString() + " [error reading]";
+                            }
+                        })
+                        .sorted()
+                        .collect(Collectors.toList());
+
+                if (plots.isEmpty()) {
+                    return "No plot journals saved yet.";
+                }
+
+                return "Plot Journals:\n" + String.join("\n", plots);
+            }
+        } catch (IOException e) {
+            return "Error listing plots: " + e.getMessage();
         }
     }
 
