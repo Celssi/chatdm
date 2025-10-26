@@ -3,12 +3,9 @@ package fi.celssi.chatdm.service;
 import fi.celssi.chatdm.model.GameSystem;
 import fi.celssi.chatdm.model.ResourceInfo;
 import fi.celssi.chatdm.model.SearchResult;
+import fi.celssi.chatdm.util.PdfTextCache;
 import jakarta.annotation.PostConstruct;
-import org.apache.pdfbox.Loader;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -19,10 +16,16 @@ import java.util.stream.Collectors;
 public class GameResourceOracle {
 
     private static final int DEFAULT_MAX_RESULTS = 5;
-    private static final int DEFAULT_CONTEXT_LENGTH = 150;
 
     private final Map<String, GameSystem> gameSystems = new HashMap<>();
     private final Map<String, ResourceInfo> resources = new HashMap<>();
+    private final PdfTextCache pdfTextCache;
+    private final PdfSearchEngine searchEngine;
+
+    public GameResourceOracle(PdfTextCache pdfTextCache, PdfSearchEngine searchEngine) {
+        this.pdfTextCache = pdfTextCache;
+        this.searchEngine = searchEngine;
+    }
 
     @PostConstruct
     public void init() {
@@ -44,7 +47,7 @@ public class GameResourceOracle {
         addResource(system, "birthday", "A Birthday of Wonders",
                 "pdfs/brambletrek/Brambletrek_-_A_Birthday_of_Wonders.pdf",
                 "adventure",
-                "Celebrate Brambletrek’s founding in this heartwarming adventure where the Gnawborn, Bristleborn, and Bushborn gather for the village’s grand anniversary. Join Bramble on a journey to find the perfect birthday gift—a quest that reveals the meaning of kinship, memory, and home.");
+                "Celebrate Brambletrek's founding in this heartwarming adventure where the Gnawborn, Bristleborn, and Bushborn gather for the village's grand anniversary. Join Bramble on a journey to find the perfect birthday gift—a quest that reveals the meaning of kinship, memory, and home.");
 
         addResource(system, "pumpkin", "The Pumpkin Party",
                 "pdfs/brambletrek/Brambletrek_-_The_Pumpkin_Party.pdf",
@@ -99,11 +102,11 @@ public class GameResourceOracle {
 
         addResource(system, "xanathar", "Xanathar's Guide to Everything",
                 "pdfs/dnd/xanathars_guide_to_everything.pdf", "supplement",
-                "A treasure trove of expanded options for players and DMs alike, featuring new subclasses, spells, downtime activities, and guidance for running rich, character-driven campaigns, all through the eyes of Waterdeep’s most infamous beholder.");
+                "A treasure trove of expanded options for players and DMs alike, featuring new subclasses, spells, downtime activities, and guidance for running rich, character-driven campaigns, all through the eyes of Waterdeep's most infamous beholder.");
 
         addResource(system, "xanathar-lost", "Xanathar's Lost Notes to Everything Else",
                 "pdfs/dnd/xanathars_lost_notes.pdf", "supplement",
-                "A DM’s Guild Adepts companion to Xanathar’s Guide, offering dozens of new subclasses, backgrounds, races, and rules modules. Blends player options with story-driven lore from the darker corners of the multiverse.");
+                "A DM's Guild Adepts companion to Xanathar's Guide, offering dozens of new subclasses, backgrounds, races, and rules modules. Blends player options with story-driven lore from the darker corners of the multiverse.");
 
         addResource(system, "dragons", "The Book of Dragons",
                 "pdfs/dnd/book_of_dragons.pdf", "supplement",
@@ -144,7 +147,7 @@ public class GameResourceOracle {
 
         addResource(system, "strider-mode", "Strider Mode",
                 "pdfs/lotr/strider_mode.pdf", "core",
-                "Rules for solo play inspired by Aragorn’s wandering years. Includes oracles, tables, and guidance to explore Middle-earth alone or cooperatively without a Loremaster.");
+                "Rules for solo play inspired by Aragorn's wandering years. Includes oracles, tables, and guidance to explore Middle-earth alone or cooperatively without a Loremaster.");
 
         addResource(system, "starter-adventures", "Starter Set - The Adventures",
                 "pdfs/lotr/starter_set_adventures.pdf", "adventure",
@@ -152,7 +155,7 @@ public class GameResourceOracle {
 
         addResource(system, "starter-rules", "Starter Set - The Rules",
                 "pdfs/lotr/starter_set_rules.pdf", "core",
-                "Streamlined rules and examples of play introducing The One Ring’s core mechanics. Ideal for learning the system and guiding new adventurers through their first journeys.");
+                "Streamlined rules and examples of play introducing The One Ring's core mechanics. Ideal for learning the system and guiding new adventurers through their first journeys.");
 
         addResource(system, "starter-shire", "Starter Set - The Shire",
                 "pdfs/lotr/starter_set_shire.pdf", "setting",
@@ -212,27 +215,33 @@ public class GameResourceOracle {
 
     @Tool(name = "ChatDM_search_resource", description = """
             Search for text within a specific resource or across all resources in all game systems.
+            Supports both plain text and regex pattern matching with fuzzy/stemmed search.
+
             Parameters:
-            - query: The text to search for (required)
+            - query: The text or regex pattern to search for (required)
             - resourceName: Optional. Leave empty to search all resources, or specify a resource ID.
               Use ChatDM_list_resources to see available resource IDs.
             - maxResults: Optional. Maximum number of results to return (default: 5)
-            
-            Returns search results with page numbers and text context.
+            - useRegex: Optional. Set to true to treat query as a regex pattern (default: false)
+
+            Returns search results with page numbers, text context, match counts, and relevance scores.
+            Results are ranked by relevance.
             """)
-    public String searchResource(String query, String resourceName, Integer maxResults) {
+    public String searchResource(String query, String resourceName, Integer maxResults, Boolean useRegex) {
         if (query == null || query.trim().isEmpty()) {
             return "Error: Query cannot be empty";
         }
 
         maxResults = (maxResults == null) ? DEFAULT_MAX_RESULTS : maxResults;
+        useRegex = (useRegex == null) ? false : useRegex;
+
         Collection<Map.Entry<String, ResourceInfo>> resourcesToSearch = getResourcesToSearch(resourceName);
 
         if (resourcesToSearch == null) {
             return "Error: Unknown resource. Use ChatDM_list_resources to see available resources.";
         }
 
-        List<SearchResult> results = performSearch(resourcesToSearch, query, maxResults);
+        List<SearchResult> results = searchEngine.performParallelSearch(resourcesToSearch, query, maxResults, useRegex);
 
         if (results.isEmpty()) {
             return "No results found for: " + query;
@@ -251,23 +260,10 @@ public class GameResourceOracle {
         return resources.entrySet();
     }
 
-    private List<SearchResult> performSearch(Collection<Map.Entry<String, ResourceInfo>> resourcesToSearch,
-                                             String query, int maxResults) {
-        List<SearchResult> results = new ArrayList<>();
-        for (Map.Entry<String, ResourceInfo> entry : resourcesToSearch) {
-            try {
-                results.addAll(searchInPdf(entry.getValue(), query, maxResults));
-            } catch (IOException e) {
-                return new ArrayList<>(); // Return empty list on error
-            }
-        }
-        return results;
-    }
-
     private String formatSearchResults(List<SearchResult> results, String query, int maxResults) {
-        results = results.stream().limit(maxResults).collect(Collectors.toList());
         StringBuilder output = new StringBuilder();
-        output.append(String.format("Found %d result(s) for '%s':\n\n", results.size(), query));
+        output.append(String.format("Found %d result(s) for '%s' (showing top %d):\n\n",
+                results.size(), query, Math.min(results.size(), maxResults)));
         for (SearchResult result : results) {
             output.append(result.toString()).append("\n\n");
         }
@@ -280,7 +276,7 @@ public class GameResourceOracle {
             - resourceName: Required. The resource ID to read from.
               Use ChatDM_list_resources to see available resource IDs.
             - pageNumber: Required. The page number to retrieve (1-indexed)
-            
+
             Returns the text content of the specified page.
             """)
     public String getPage(String resourceName, int pageNumber) {
@@ -295,60 +291,14 @@ public class GameResourceOracle {
         ResourceInfo resource = resources.get(resourceName);
 
         try {
-            ClassPathResource pdfResource = new ClassPathResource(resource.path);
-            try (PDDocument document = Loader.loadPDF(pdfResource.getInputStream().readAllBytes())) {
-                if (pageNumber > document.getNumberOfPages()) {
-                    return String.format("Error: Page %d does not exist. Document has %d pages.",
-                            pageNumber, document.getNumberOfPages());
-                }
-
-                PDFTextStripper stripper = new PDFTextStripper();
-                stripper.setStartPage(pageNumber);
-                stripper.setEndPage(pageNumber);
-                String text = stripper.getText(document);
-
-                return String.format("[%s - Page %d]\n\n%s",
-                        resource.name, pageNumber, text);
+            String pageText = pdfTextCache.getPageText(resource.path, pageNumber);
+            if (pageText == null) {
+                return String.format("Error: Page %d does not exist.", pageNumber);
             }
+
+            return String.format("[%s - Page %d]\n\n%s", resource.name, pageNumber, pageText);
         } catch (IOException e) {
             return "Error reading page: " + e.getMessage();
         }
-    }
-
-    private List<SearchResult> searchInPdf(ResourceInfo resource, String query, int maxPerResource) throws IOException {
-        List<SearchResult> results = new ArrayList<>();
-        String queryLower = query.toLowerCase();
-
-        ClassPathResource pdfResource = new ClassPathResource(resource.path);
-        try (PDDocument document = Loader.loadPDF(pdfResource.getInputStream().readAllBytes())) {
-            PDFTextStripper stripper = new PDFTextStripper();
-
-            for (int i = 1; i <= document.getNumberOfPages() && results.size() < maxPerResource; i++) {
-                stripper.setStartPage(i);
-                stripper.setEndPage(i);
-                String pageText = stripper.getText(document);
-
-                if (pageText.toLowerCase().contains(queryLower)) {
-                    String context = extractContext(pageText, queryLower);
-                    results.add(new SearchResult(resource.name, i, context));
-                }
-            }
-        }
-
-        return results;
-    }
-
-    private String extractContext(String text, String query) {
-        String textLower = text.toLowerCase();
-        int index = textLower.indexOf(query.toLowerCase());
-
-        if (index == -1) {
-            return text.substring(0, Math.min(DEFAULT_CONTEXT_LENGTH, text.length()));
-        }
-
-        int start = Math.max(0, index - DEFAULT_CONTEXT_LENGTH / 2);
-        int end = Math.min(text.length(), index + query.length() + DEFAULT_CONTEXT_LENGTH / 2);
-
-        return text.substring(start, end).replaceAll("\\s+", " ").trim();
     }
 }
