@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PdfTextCache {
 
     private final Map<String, Map<Integer, String>> cache = new ConcurrentHashMap<>();
+    private final Map<String, Integer> pageCountCache = new ConcurrentHashMap<>();
 
     /**
      * Retrieves page text from cache or extracts it from PDF if not cached.
@@ -57,10 +58,16 @@ public class PdfTextCache {
      * @throws IOException if PDF reading fails
      */
     public int getPageCount(String resourcePath) throws IOException {
-        ClassPathResource pdfResource = new ClassPathResource(resourcePath);
-        try (PDDocument document = Loader.loadPDF(pdfResource.getInputStream().readAllBytes())) {
-            return document.getNumberOfPages();
-        }
+        return pageCountCache.computeIfAbsent(resourcePath, path -> {
+            try {
+                ClassPathResource pdfResource = new ClassPathResource(path);
+                try (PDDocument document = Loader.loadPDF(pdfResource.getInputStream().readAllBytes())) {
+                    return document.getNumberOfPages();
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to get page count for: " + path, e);
+            }
+        });
     }
 
     /**
@@ -70,6 +77,7 @@ public class PdfTextCache {
      */
     public void clearResource(String resourcePath) {
         cache.remove(resourcePath);
+        pageCountCache.remove(resourcePath);
     }
 
     /**
@@ -77,5 +85,6 @@ public class PdfTextCache {
      */
     public void clearAll() {
         cache.clear();
+        pageCountCache.clear();
     }
 }

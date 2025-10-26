@@ -21,10 +21,12 @@ public class GameResourceOracle {
     private final Map<String, ResourceInfo> resources = new HashMap<>();
     private final PdfTextCache pdfTextCache;
     private final PdfSearchEngine searchEngine;
+    private final SqliteSearchEngine sqliteSearchEngine;
 
-    public GameResourceOracle(PdfTextCache pdfTextCache, PdfSearchEngine searchEngine) {
+    public GameResourceOracle(PdfTextCache pdfTextCache, PdfSearchEngine searchEngine, SqliteSearchEngine sqliteSearchEngine) {
         this.pdfTextCache = pdfTextCache;
         this.searchEngine = searchEngine;
+        this.sqliteSearchEngine = sqliteSearchEngine;
     }
 
     @PostConstruct
@@ -214,34 +216,58 @@ public class GameResourceOracle {
     }
 
     @Tool(name = "ChatDM_search_resource", description = """
-            Search for text within a specific resource or across all resources in all game systems.
+            Search for text within a specific game system or resource.
             Supports both plain text and regex pattern matching with fuzzy/stemmed search.
 
             Parameters:
             - query: The text or regex pattern to search for (required)
-            - resourceName: Optional. Leave empty to search all resources, or specify a resource ID.
+            - gameSystemId: The game system to search in (REQUIRED). Valid values:
+              * "the-one-ring" - The One Ring RPG
+              * "dnd-5e-2024" - Dungeons & Dragons 5th Edition (2024)
+              * "brambletrek" - Brambletrek woodland RPG
+              * "my-little-pony" - My Little Pony RPG
+            - resourceName: Optional. Specific resource ID within the game system, or empty to search all resources in that system.
               Use ChatDM_list_resources to see available resource IDs.
             - maxResults: Optional. Maximum number of results to return (default: 5)
             - useRegex: Optional. Set to true to treat query as a regex pattern (default: false)
 
             Returns search results with page numbers, text context, match counts, and relevance scores.
             Results are ranked by relevance.
+
+            IMPORTANT: Always specify the gameSystemId to ensure fast search performance.
             """)
-    public String searchResource(String query, String resourceName, Integer maxResults, Boolean useRegex) {
+    public String searchResource(String query, String gameSystemId, String resourceName, Integer maxResults, Boolean useRegex) {
         if (query == null || query.trim().isEmpty()) {
             return "Error: Query cannot be empty";
+        }
+
+        if (gameSystemId == null || gameSystemId.trim().isEmpty()) {
+            return "Error: gameSystemId is required. Valid values: the-one-ring, dnd-5e-2024, brambletrek, my-little-pony";
         }
 
         maxResults = (maxResults == null) ? DEFAULT_MAX_RESULTS : maxResults;
         useRegex = (useRegex == null) ? false : useRegex;
 
-        Collection<Map.Entry<String, ResourceInfo>> resourcesToSearch = getResourcesToSearch(resourceName);
+        List<SearchResult> results;
 
-        if (resourcesToSearch == null) {
-            return "Error: Unknown resource. Use ChatDM_list_resources to see available resources.";
+        // Validate game system exists before searching
+        if (!gameSystems.containsKey(gameSystemId)) {
+            return "Error: Unknown game system. Valid values: the-one-ring, dnd-5e-2024, brambletrek, my-little-pony";
         }
 
-        List<SearchResult> results = searchEngine.performParallelSearch(resourcesToSearch, query, maxResults, useRegex);
+        // Use fast SQLite FTS index if available and not using regex
+        if (!useRegex && sqliteSearchEngine.isAvailable() && (resourceName == null || resourceName.trim().isEmpty())) {
+            results = sqliteSearchEngine.search(gameSystemId, query, maxResults);
+        } else {
+            // Fallback to slower PDF text search for regex or specific resources
+            Collection<Map.Entry<String, ResourceInfo>> resourcesToSearch = getResourcesToSearch(gameSystemId, resourceName);
+
+            if (resourcesToSearch == null) {
+                return "Error: Unknown resource. Use ChatDM_list_resources to see available options.";
+            }
+
+            results = searchEngine.performParallelSearch(resourcesToSearch, query, maxResults, useRegex);
+        }
 
         if (results.isEmpty()) {
             return "No results found for: " + query;
@@ -250,14 +276,22 @@ public class GameResourceOracle {
         return formatSearchResults(results, query, maxResults);
     }
 
-    private Collection<Map.Entry<String, ResourceInfo>> getResourcesToSearch(String resourceName) {
+    private Collection<Map.Entry<String, ResourceInfo>> getResourcesToSearch(String gameSystemId, String resourceName) {
+        // If specific resource is requested, return just that one
         if (resourceName != null && !resourceName.trim().isEmpty()) {
             if (!resources.containsKey(resourceName)) {
                 return null;
             }
             return Collections.singletonList(Map.entry(resourceName, resources.get(resourceName)));
         }
-        return resources.entrySet();
+
+        // Search all resources in the specified game system
+        GameSystem gameSystem = gameSystems.get(gameSystemId);
+        if (gameSystem == null) {
+            return null;
+        }
+
+        return gameSystem.getResources().entrySet();
     }
 
     private String formatSearchResults(List<SearchResult> results, String query, int maxResults) {
