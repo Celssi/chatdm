@@ -268,6 +268,32 @@ public class JournalOracle {
         }
     }
 
+    @Tool(name = "ChatDM_read_adventure", description = """
+            Read a single adventure journal by name.
+            Parameters:
+            - adventureName: Required. The name of the adventure to read
+
+            Returns the complete adventure journal content including all logged events.
+            """)
+    public String readAdventure(String adventureName) {
+        if (adventureName == null || adventureName.trim().isEmpty()) {
+            return "Error: Adventure name is required";
+        }
+
+        try {
+            String sanitizedName = sanitizeFilename(adventureName);
+            Path adventurePath = findLatestAdventure(sanitizedName);
+
+            if (adventurePath == null) {
+                return String.format("Error: No adventure found with name '%s'. Use ChatDM_list_adventures to see available adventures.", adventureName);
+            }
+
+            return Files.readString(adventurePath);
+        } catch (IOException e) {
+            return "Error reading adventure: " + e.getMessage();
+        }
+    }
+
     @Tool(name = "ChatDM_save_npc", description = """
             Save an NPC to the catalog for an adventure.
             
