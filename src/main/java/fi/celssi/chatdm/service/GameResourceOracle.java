@@ -178,8 +178,21 @@ public class GameResourceOracle {
     }
 
     @Tool(name = "ChatDM_list_resources", description = """
-            List all available RPG resources (rulebooks and adventures) across all game systems.
-            Returns information about each resource including game system, name, type, and description.
+            List all available RPG rulebooks, adventures, and supplements across all game systems.
+
+            WHEN TO USE:
+            - At session start to see what resources are available
+            - Before searching to find the correct resource IDs
+            - To discover supplements for your current game system
+            - When planning a new campaign or adventure
+
+            RETURNS:
+            Organized listing by game system (The One Ring, D&D 5e 2024, Brambletrek, My Little Pony)
+            with resource IDs, names, types (core/adventure/setting/supplement), and descriptions.
+
+            NEXT STEPS:
+            - Use ChatDM_search_resource to search within specific systems
+            - Use resource IDs with ChatDM_get_page to read specific pages
             """)
     public String listResources() {
         StringBuilder result = new StringBuilder("Available Game Systems and Resources:\n\n");
@@ -216,25 +229,44 @@ public class GameResourceOracle {
     }
 
     @Tool(name = "ChatDM_search_resource", description = """
-            Search for text within a specific game system or resource.
-            Supports both plain text and regex pattern matching with fuzzy/stemmed search.
+            Search for rules, lore, or mechanics within RPG rulebooks and supplements.
+            Uses fast full-text search with stemming and BM25 relevance ranking.
 
-            Parameters:
-            - query: The text or regex pattern to search for (required)
-            - gameSystemId: The game system to search in (REQUIRED). Valid values:
-              * "the-one-ring" - The One Ring RPG
+            WHEN TO USE:
+            - Looking up specific rules during gameplay
+            - Finding spell descriptions, monster stats, or abilities
+            - Researching lore about locations, NPCs, or factions
+            - Clarifying mechanics or resolving rule questions
+
+            PARAMETERS:
+            - query: Search text (required) - Use natural language or keywords
+            - gameSystemId: REQUIRED game system to search:
+              * "the-one-ring" - The One Ring RPG (Middle-earth)
               * "dnd-5e-2024" - Dungeons & Dragons 5th Edition (2024)
-              * "brambletrek" - Brambletrek woodland RPG
-              * "my-little-pony" - My Little Pony RPG
-            - resourceName: Optional. Specific resource ID within the game system, or empty to search all resources in that system.
-              Use ChatDM_list_resources to see available resource IDs.
-            - maxResults: Optional. Maximum number of results to return (default: 5)
-            - useRegex: Optional. Set to true to treat query as a regex pattern (default: false)
+              * "brambletrek" - Brambletrek woodland creatures RPG
+              * "my-little-pony" - My Little Pony RPG (Essence20)
+            - resourceName: Optional resource ID (from ChatDM_list_resources). Leave empty to search all.
+            - maxResults: Optional (default: 5). Increase for broader searches.
+            - useRegex: Optional (default: false). Use true for regex patterns (slower).
 
-            Returns search results with page numbers, text context, match counts, and relevance scores.
-            Results are ranked by relevance.
+            SEARCH TIPS:
+            - Use keywords: "fireball spell", "ranger class", "orc stat block"
+            - Searches are stemmed: "fighting" matches "fight", "fighter", "fought"
+            - Combine terms: "hobbit journey fatigue" finds journey rules
+            - Proper names work great: "Gandalf", "Moria", "Eriador"
 
-            IMPORTANT: Always specify the gameSystemId to ensure fast search performance.
+            RETURNS:
+            Ranked results with page numbers, context snippets, and match counts.
+            Each result shows which resource and page to reference.
+
+            PERFORMANCE:
+            - System-wide searches: ~100ms (uses fast SQLite FTS5 index)
+            - Regex searches: 3-20 seconds (scans full PDFs)
+
+            NEXT STEPS AFTER RESULTS:
+            - Use ChatDM_get_page to read full pages from results
+            - Refine search with more specific terms if needed
+            - Try different keywords if no matches found
             """)
     public String searchResource(String query, String gameSystemId, String resourceName, Integer maxResults, Boolean useRegex) {
         if (query == null || query.trim().isEmpty()) {
@@ -305,13 +337,31 @@ public class GameResourceOracle {
     }
 
     @Tool(name = "ChatDM_get_page", description = """
-            Get the text content from a specific page of a resource.
-            Parameters:
-            - resourceName: Required. The resource ID to read from.
-              Use ChatDM_list_resources to see available resource IDs.
-            - pageNumber: Required. The page number to retrieve (1-indexed)
+            Read the full text from a specific page of an RPG rulebook or supplement.
 
-            Returns the text content of the specified page.
+            WHEN TO USE:
+            - After ChatDM_search_resource finds relevant pages
+            - Reading complete rules sections or stat blocks
+            - Getting full context around a search result
+            - Reading adventure scenes or encounters
+
+            PARAMETERS:
+            - resourceName: Required resource ID from ChatDM_list_resources
+            - pageNumber: Required page number (1-indexed, as shown in search results)
+
+            RETURNS:
+            Complete text content of the specified page with resource name and page header.
+
+            TIPS:
+            - Search results show page numbers - use those directly
+            - Read adjacent pages (page-1, page+1) for full context
+            - Some tables/stat blocks span multiple pages
+            - Page numbers match the PDF page numbers
+
+            EXAMPLE WORKFLOW:
+            1. ChatDM_search_resource finds "fireball" on page 240
+            2. ChatDM_get_page to read page 240 for complete spell description
+            3. Read page 239-241 if spell details span multiple pages
             """)
     public String getPage(String resourceName, int pageNumber) {
         if (resourceName == null || !resources.containsKey(resourceName)) {
