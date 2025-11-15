@@ -269,6 +269,62 @@ public class JournalOracle {
         }
     }
 
+    @Tool(name = "ChatDM_list_adventures_by_campaign", description = """
+            List all adventure journals that belong to a specific campaign.
+            Parameters:
+            - campaignName: Required. The name of the campaign to filter by
+            
+            Returns a list of all adventures that have the specified campaign name in their # Campaign: comment.
+            """)
+    public String listAdventuresByCampaign(String campaignName) {
+        if (campaignName == null || campaignName.trim().isEmpty()) {
+            return "Error: Campaign name is required";
+        }
+
+        try {
+            Path adventuresPath = adventuresDir;
+
+            if (!Files.exists(adventuresPath)) {
+                return "No adventures directory found.";
+            }
+
+            try (Stream<Path> paths = Files.list(adventuresPath)) {
+                List<String> adventures = paths
+                        .filter(Files::isRegularFile)
+                        .filter(p -> p.toString().endsWith(".md"))
+                        .sorted((a, b) -> b.getFileName().toString().compareTo(a.getFileName().toString()))
+                        .map(path -> {
+                            try {
+                                String content = Files.readString(path);
+                                String adventureCampaign = extractCampaignName(content);
+                                
+                                // Filter by campaign name (case-insensitive comparison)
+                                if (adventureCampaign == null || !adventureCampaign.equalsIgnoreCase(campaignName.trim())) {
+                                    return null;
+                                }
+                                
+                                String name = extractMarkdownTitle(content);
+                                String gameSystem = extractValue(content, "**Game System:**");
+                                String started = extractValue(content, "**Started:**");
+                                return String.format("  - %s [%s] - %s", name, gameSystem, started);
+                            } catch (IOException e) {
+                                return null; // Skip files with errors
+                            }
+                        })
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                if (adventures.isEmpty()) {
+                    return String.format("No adventures found for campaign '%s'.", campaignName);
+                }
+
+                return String.format("Adventures for Campaign '%s':\n%s", campaignName, String.join("\n", adventures));
+            }
+        } catch (IOException e) {
+            return "Error listing adventures by campaign: " + e.getMessage();
+        }
+    }
+
     @Tool(name = "ChatDM_read_adventure", description = """
             Read a single adventure journal by name.
             Parameters:
@@ -701,5 +757,24 @@ public class JournalOracle {
         if (end == -1) end = content.length();
 
         return content.substring(start, end).trim();
+    }
+
+    private String extractCampaignName(String content) {
+        // Look for "# Campaign: " pattern (case-insensitive)
+        String pattern = "# Campaign:";
+        String lowerContent = content.toLowerCase();
+        String lowerPattern = pattern.toLowerCase();
+        int start = lowerContent.indexOf(lowerPattern);
+        
+        if (start == -1) {
+            return null;
+        }
+
+        start += pattern.length();
+        int end = content.indexOf("\n", start);
+        if (end == -1) end = content.length();
+
+        String campaignName = content.substring(start, end).trim();
+        return campaignName.isEmpty() ? null : campaignName;
     }
 }
