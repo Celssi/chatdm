@@ -529,10 +529,7 @@ public class JournalOracle {
             String existingContent = Files.readString(npcPath);
             String createdDate = extractValue(existingContent, "CREATED:");
             String campaign = extractValue(existingContent, "CAMPAIGN:");
-            // Fallback to ADVENTURE: for backward compatibility during migration
-            if (campaign.equals("Unknown")) {
-                campaign = extractValue(existingContent, "ADVENTURE:");
-            }
+
             // Use provided campaignName if we couldn't extract it
             if (campaign.equals("Unknown")) {
                 campaign = campaignName;
@@ -584,10 +581,6 @@ public class JournalOracle {
                             try {
                                 String content = Files.readString(path);
                                 String campaign = extractValue(content, "CAMPAIGN:");
-                                // Fallback to ADVENTURE: for backward compatibility during migration
-                                if (campaign.equals("Unknown")) {
-                                    campaign = extractValue(content, "ADVENTURE:");
-                                }
                                 String npcName = extractValue(content, "NPC:");
                                 String created = extractValue(content, "CREATED:");
 
@@ -789,10 +782,7 @@ public class JournalOracle {
             String existingContent = Files.readString(locationPath);
             String createdDate = extractValue(existingContent, "CREATED:");
             String campaign = extractValue(existingContent, "CAMPAIGN:");
-            // Fallback to ADVENTURE: for backward compatibility during migration
-            if (campaign.equals("Unknown")) {
-                campaign = extractValue(existingContent, "ADVENTURE:");
-            }
+
             // Use provided campaignName if we couldn't extract it
             if (campaign.equals("Unknown")) {
                 campaign = campaignName;
@@ -845,10 +835,6 @@ public class JournalOracle {
                             try {
                                 String content = Files.readString(path);
                                 String campaign = extractValue(content, "CAMPAIGN:");
-                                // Fallback to ADVENTURE: for backward compatibility during migration
-                                if (campaign.equals("Unknown")) {
-                                    campaign = extractValue(content, "ADVENTURE:");
-                                }
                                 String locationName = extractValue(content, "LOCATION:");
                                 String created = extractValue(content, "CREATED:");
 
