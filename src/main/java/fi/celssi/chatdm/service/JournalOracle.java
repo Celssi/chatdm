@@ -12,6 +12,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,16 +23,16 @@ public class JournalOracle {
     private final Path charactersDir;
     private final Path adventuresDir;
     private final Path npcsDir;
-    private final Path plotsDir;
+    private final Path campaignsDir;
 
     public JournalOracle() {
-        // Use user home directory to avoid permission issues
+        // Use the user home directory to avoid permission issues
         String userHome = System.getProperty("user.home");
         Path baseDir = Paths.get(userHome, ".chatdm", "journal");
         this.charactersDir = baseDir.resolve("characters");
         this.adventuresDir = baseDir.resolve("adventures");
         this.npcsDir = baseDir.resolve("npcs");
-        this.plotsDir = baseDir.resolve("plots");
+        this.campaignsDir = baseDir.resolve("campaigns");
     }
 
     @PostConstruct
@@ -40,7 +41,7 @@ public class JournalOracle {
         Files.createDirectories(charactersDir);
         Files.createDirectories(adventuresDir);
         Files.createDirectories(npcsDir);
-        Files.createDirectories(plotsDir);
+        Files.createDirectories(campaignsDir);
     }
 
     @Tool(name = "ChatDM_save_character", description = """
@@ -49,7 +50,7 @@ public class JournalOracle {
             - characterName: Required. The name of the character (will be used as filename)
             - gameSystem: Required. The game system (e.g., 'brambletrek')
             - characterData: Required. Character information (stats, description, etc.)
-
+            
             The character will be saved as a .txt file in the characters directory.
             """)
     public String saveCharacter(String characterName, String gameSystem, String characterData) {
@@ -71,7 +72,7 @@ public class JournalOracle {
                     CHARACTER: %s
                     GAME SYSTEM: %s
                     CREATED: %s
-
+                    
                     %s
                     """, characterName, gameSystem, LocalDateTime.now().format(DATE_FORMAT), characterData);
 
@@ -86,7 +87,7 @@ public class JournalOracle {
             Load a previously saved character from file.
             Parameters:
             - characterName: Required. The name of the character to load
-
+            
             Returns the character data from the file.
             """)
     public String loadCharacter(String characterName) {
@@ -154,7 +155,7 @@ public class JournalOracle {
             - gameSystem: Required. The game system being used
             - characters: Optional. Comma-separated list of character names participating
             - description: Optional. Brief description of the adventure
-
+            
             Creates a new markdown file for the adventure log.
             """)
     public String startAdventure(String adventureName, String gameSystem, String characters, String description) {
@@ -198,7 +199,7 @@ public class JournalOracle {
             Parameters:
             - adventureName: Required. Name of the adventure (must match the adventure started)
             - event: Required. Description of what happened
-
+            
             Appends the event with a timestamp to the adventure log.
             """)
     public String logEvent(String adventureName, String event) {
@@ -272,7 +273,7 @@ public class JournalOracle {
             Read a single adventure journal by name.
             Parameters:
             - adventureName: Required. The name of the adventure to read
-
+            
             Returns the complete adventure journal content including all logged events.
             """)
     public String readAdventure(String adventureName) {
@@ -336,13 +337,13 @@ public class JournalOracle {
             Path npcPath = npcsDir.resolve(sanitizedAdventure + "_" + sanitizedNpc + ".txt");
 
             String content = String.format("""
-                    ADVENTURE: %s
-                    NPC: %s
-                    CREATED: %s
-                    LAST_UPDATED: %s
-
-                    %s
-                    """, adventureName, npcName, LocalDateTime.now().format(DATE_FORMAT), 
+                            ADVENTURE: %s
+                            NPC: %s
+                            CREATED: %s
+                            LAST_UPDATED: %s
+                            
+                            %s
+                            """, adventureName, npcName, LocalDateTime.now().format(DATE_FORMAT),
                     LocalDateTime.now().format(DATE_FORMAT), npcData);
 
             Files.writeString(npcPath, content);
@@ -360,7 +361,7 @@ public class JournalOracle {
             Parameters:
             - adventureName: Required. The name of the adventure
             - npcName: Required. The name of the NPC to load
-
+            
             Returns the complete NPC data from the file for reference during roleplay.
             """)
     public String loadNpc(String adventureName, String npcName) {
@@ -431,13 +432,13 @@ public class JournalOracle {
             String createdDate = extractValue(existingContent, "CREATED:");
 
             String content = String.format("""
-                    ADVENTURE: %s
-                    NPC: %s
-                    CREATED: %s
-                    LAST_UPDATED: %s
-
-                    %s
-                    """, adventureName, npcName, createdDate, 
+                            ADVENTURE: %s
+                            NPC: %s
+                            CREATED: %s
+                            LAST_UPDATED: %s
+                            
+                            %s
+                            """, adventureName, npcName, createdDate,
                     LocalDateTime.now().format(DATE_FORMAT), npcData);
 
             Files.writeString(npcPath, content);
@@ -457,7 +458,7 @@ public class JournalOracle {
             
             Parameters:
             - adventureName: Optional. If provided, lists NPCs for that adventure only
-
+            
             Returns a list of NPCs with their creation dates and adventure associations.
             """)
     public String listNpcs(String adventureName) {
@@ -478,7 +479,7 @@ public class JournalOracle {
                                 String adventure = extractValue(content, "ADVENTURE:");
                                 String npcName = extractValue(content, "NPC:");
                                 String created = extractValue(content, "CREATED:");
-                                
+
                                 // Filter by adventure if specified
                                 if (adventureName != null && !adventureName.trim().isEmpty()) {
                                     String sanitizedAdventure = sanitizeFilename(adventureName);
@@ -487,13 +488,13 @@ public class JournalOracle {
                                         return null;
                                     }
                                 }
-                                
+
                                 return String.format("  - %s [%s] - Created: %s", npcName, adventure, created);
                             } catch (IOException e) {
                                 return "  - " + path.getFileName().toString() + " [error reading]";
                             }
                         })
-                        .filter(npc -> npc != null)
+                        .filter(Objects::nonNull)
                         .sorted()
                         .collect(Collectors.toList());
 
@@ -505,10 +506,10 @@ public class JournalOracle {
                     }
                 }
 
-                String header = adventureName != null && !adventureName.trim().isEmpty() 
-                    ? String.format("NPCs for Adventure '%s':\n", adventureName)
-                    : "All Saved NPCs:\n";
-                
+                String header = adventureName != null && !adventureName.trim().isEmpty()
+                        ? String.format("NPCs for Adventure '%s':\n", adventureName)
+                        : "All Saved NPCs:\n";
+
                 return header + String.join("\n", npcs);
             }
         } catch (IOException e) {
@@ -516,19 +517,19 @@ public class JournalOracle {
         }
     }
 
-    @Tool(name = "ChatDM_save_plot", description = """
-            Save or update the plot journal for an adventure.
+    @Tool(name = "ChatDM_save_campaign", description = """
+            Save or update the campaign journal for an adventure.
             
-            WHEN TO USE: 
-            - At adventure start to establish overarching story
+            WHEN TO USE:
+            - At campaign start to establish overarching story
             - After major plot developments or revelations
             - When story threads need to be connected
             - Between sessions to maintain narrative continuity
             - When introducing new story elements or complications
             
             Parameters:
-            - adventureName: Required. The name of the adventure
-            - plotData: Required. Comprehensive plot information including:
+            - campaignName: Required. The name of the campaign
+            - campaignData: Required. Comprehensive campaign information including:
               * Main Story Arc: Primary conflict, goals, stakes
               * Subplots: Secondary storylines and character arcs
               * Themes: Central themes and motifs
@@ -538,7 +539,7 @@ public class JournalOracle {
               * Complications: Obstacles, twists, unexpected elements
               * Future Hooks: Potential story directions, unresolved threads
             
-            EXAMPLE plotData:
+            EXAMPLE campaignData:
             "The Mystic Forest Curse: Ancient evil spreading through the grove.
             Main Arc: Stop the corruption before it reaches the village.
             Subplots: Druid circle's internal conflict, lost temple discovery.
@@ -549,40 +550,40 @@ public class JournalOracle {
             Complications: PCs' actions may accelerate the curse.
             Future Hooks: Other cursed locations, spirit's true nature."
             
-            Creates or updates the plot file for the adventure.
+            Creates or updates the campaign file.
             """)
-    public String savePlot(String adventureName, String plotData) {
-        if (adventureName == null || adventureName.trim().isEmpty()) {
-            return "Error: Adventure name is required";
+    public String saveCampaign(String campaignName, String campaignData) {
+        if (campaignName == null || campaignName.trim().isEmpty()) {
+            return "Error: Campaign name is required";
         }
-        if (plotData == null || plotData.trim().isEmpty()) {
-            return "Error: Plot data is required";
+        if (campaignData == null || campaignData.trim().isEmpty()) {
+            return "Error: Campaign data is required";
         }
 
         try {
-            String sanitizedAdventure = sanitizeFilename(adventureName);
-            Path plotPath = plotsDir.resolve(sanitizedAdventure + "_plot.txt");
+            String sanitizedCampaign = sanitizeFilename(campaignName);
+            Path campaignPath = campaignsDir.resolve(sanitizedCampaign + "_campaign.txt");
 
-            boolean isUpdate = Files.exists(plotPath);
-            String createdDate = isUpdate ? extractValue(Files.readString(plotPath), "CREATED:") : LocalDateTime.now().format(DATE_FORMAT);
+            boolean isUpdate = Files.exists(campaignPath);
+            String createdDate = isUpdate ? extractValue(Files.readString(campaignPath), "CREATED:") : LocalDateTime.now().format(DATE_FORMAT);
 
             String content = String.format("""
-                    ADVENTURE: %s
+                    NAME: %s
                     CREATED: %s
                     LAST_UPDATED: %s
-
+                    
                     %s
-                    """, adventureName, createdDate, LocalDateTime.now().format(DATE_FORMAT), plotData);
+                    """, campaignName, createdDate, LocalDateTime.now().format(DATE_FORMAT), campaignData);
 
-            Files.writeString(plotPath, content);
-            return String.format("Plot %s for adventure '%s'", isUpdate ? "updated" : "saved", adventureName);
+            Files.writeString(campaignPath, content);
+            return String.format("Campaign %s %s", isUpdate ? "updated" : "saved", campaignName);
         } catch (IOException e) {
-            return "Error saving plot: " + e.getMessage();
+            return "Error saving campaign: " + e.getMessage();
         }
     }
 
-    @Tool(name = "ChatDM_load_plot", description = """
-            Load the plot journal for an adventure.
+    @Tool(name = "ChatDM_load_campaign", description = """
+            Load the campaign journal.
             
             WHEN TO USE:
             - At session start to review story context
@@ -591,58 +592,58 @@ public class JournalOracle {
             - When connecting new events to existing storylines
             
             Parameters:
-            - adventureName: Required. The name of the adventure
-
-            Returns the complete plot data from the file for story reference.
+            - campaignName: Required. The name of the campaign
+            
+            Returns the complete campaign data from the file for story reference.
             """)
-    public String loadPlot(String adventureName) {
-        if (adventureName == null || adventureName.trim().isEmpty()) {
+    public String loadCampaign(String campaignName) {
+        if (campaignName == null || campaignName.trim().isEmpty()) {
             return "Error: Adventure name is required";
         }
 
         try {
-            String sanitizedAdventure = sanitizeFilename(adventureName);
-            Path plotPath = plotsDir.resolve(sanitizedAdventure + "_plot.txt");
+            String sanitizedCampaign = sanitizeFilename(campaignName);
+            Path campaignPath = campaignsDir.resolve(sanitizedCampaign + "_campaign.txt");
 
-            if (!Files.exists(plotPath)) {
-                return String.format("Error: No plot found for adventure '%s'. Use ChatDM_save_plot to create one.", adventureName);
+            if (!Files.exists(campaignPath)) {
+                return String.format("Error: No campaign %s found. Use ChatDM_save_campaign to create one.", campaignName);
             }
 
-            return Files.readString(plotPath);
+            return Files.readString(campaignPath);
         } catch (IOException e) {
-            return "Error loading plot: " + e.getMessage();
+            return "Error loading campaign: " + e.getMessage();
         }
     }
 
-    @Tool(name = "ChatDM_list_plots", description = """
-            List all plot journals.
+    @Tool(name = "ChatDM_list_campaigns", description = """
+            List all campaign journals.
             
             WHEN TO USE:
             - To review all ongoing storylines
             - When planning cross-adventure connections
-            - To check which adventures have established plots
+            - To check which adventures have established campaigns
             - During campaign planning sessions
             
-            Returns a list of all adventures with plot journals and their last update dates.
+            Returns a list of all adventures with campaign journals and their last update dates.
             """)
-    public String listPlots() {
+    public String listCampaigns() {
         try {
-            Path plotsPath = plotsDir;
+            Path campaignsPath = campaignsDir;
 
-            if (!Files.exists(plotsPath)) {
-                return "No plots directory found.";
+            if (!Files.exists(campaignsPath)) {
+                return "No campaigns directory found.";
             }
 
-            try (Stream<Path> paths = Files.list(plotsPath)) {
-                List<String> plots = paths
+            try (Stream<Path> paths = Files.list(campaignsPath)) {
+                List<String> campaigns = paths
                         .filter(Files::isRegularFile)
-                        .filter(p -> p.toString().endsWith("_plot.txt"))
+                        .filter(p -> p.toString().endsWith("_campaign.txt"))
                         .map(path -> {
                             try {
                                 String content = Files.readString(path);
-                                String adventure = extractValue(content, "ADVENTURE:");
+                                String name = extractValue(content, "NAME:");
                                 String lastUpdated = extractValue(content, "LAST_UPDATED:");
-                                return String.format("  - %s - Last Updated: %s", adventure, lastUpdated);
+                                return String.format("  - %s - Last Updated: %s", name, lastUpdated);
                             } catch (IOException e) {
                                 return "  - " + path.getFileName().toString() + " [error reading]";
                             }
@@ -650,14 +651,14 @@ public class JournalOracle {
                         .sorted()
                         .collect(Collectors.toList());
 
-                if (plots.isEmpty()) {
-                    return "No plot journals saved yet.";
+                if (campaigns.isEmpty()) {
+                    return "No campaign journals saved yet.";
                 }
 
-                return "Plot Journals:\n" + String.join("\n", plots);
+                return "Campaign Journals:\n" + String.join("\n", campaigns);
             }
         } catch (IOException e) {
-            return "Error listing plots: " + e.getMessage();
+            return "Error listing campaigns: " + e.getMessage();
         }
     }
 
@@ -671,9 +672,7 @@ public class JournalOracle {
         try (Stream<Path> paths = Files.list(adventuresPath)) {
             return paths
                     .filter(Files::isRegularFile)
-                    .filter(p -> p.getFileName().toString().endsWith("_" + sanitizedName + ".md"))
-                    .sorted((a, b) -> b.getFileName().toString().compareTo(a.getFileName().toString()))
-                    .findFirst()
+                    .filter(p -> p.getFileName().toString().endsWith("_" + sanitizedName + ".md")).min((a, b) -> b.getFileName().toString().compareTo(a.getFileName().toString()))
                     .orElse(null);
         }
     }
