@@ -184,22 +184,26 @@ public class WryterioOracle {
             - chapterIndex: Required. 1-based chapter number
             - title: Optional. New chapter title
             - content: Optional. New chapter content (markdown)
+            - description: Optional. Chapter description
+            - targetWordCount: Optional. Target word count (e.g. "3000")
             """)
-    public String updateWryterioChapter(String wryterioToken, String bookId, int chapterIndex, String title, String content) {
+    public String updateWryterioChapter(String wryterioToken, String bookId, int chapterIndex, String title, String content, String description, String targetWordCount) {
         String token = resolveToken(wryterioToken);
         if (token == null) return "Error: Wryterio token required.";
         if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
         if (chapterIndex < 1) return "Error: chapterIndex must be >= 1.";
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
-        if ((title == null || title.isBlank()) && (content == null || content.isBlank())) {
-            return "Error: At least one of title or content is required.";
+        if ((title == null || title.isBlank()) && (content == null || content.isBlank()) && (description == null || description.isBlank()) && (targetWordCount == null || targetWordCount.isBlank())) {
+            return "Error: At least one of title, content, description, or targetWordCount is required.";
         }
 
         try {
             StringBuilder body = new StringBuilder("{");
             boolean first = true;
             if (title != null && !title.isBlank()) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
-            if (content != null) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); }
+            if (content != null) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); first = false; }
+            if (description != null) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
+            if (targetWordCount != null) { if (!first) body.append(","); body.append("\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\""); }
             body.append("}");
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters/" + chapterIndex;
@@ -223,8 +227,10 @@ public class WryterioOracle {
             - bookId: Required. Wryterio book ID
             - title: Required. Chapter title
             - content: Optional. Chapter content (markdown)
+            - description: Optional. Chapter description
+            - targetWordCount: Optional. Target word count (e.g. "3000")
             """)
-    public String addWryterioChapter(String wryterioToken, String bookId, String title, String content) {
+    public String addWryterioChapter(String wryterioToken, String bookId, String title, String content, String description, String targetWordCount) {
         String token = resolveToken(wryterioToken);
         if (token == null) return "Error: Wryterio token required.";
         if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
@@ -232,17 +238,23 @@ public class WryterioOracle {
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
 
         try {
-            String body = "{\"title\":\"" + escapeJson(title.trim()) + "\"";
+            StringBuilder body = new StringBuilder("{\"title\":\"" + escapeJson(title.trim()) + "\"");
             if (content != null && !content.isBlank()) {
-                body += ",\"content\":\"" + escapeJson(content) + "\"";
+                body.append(",\"content\":\"").append(escapeJson(content)).append("\"");
             }
-            body += "}";
+            if (description != null && !description.isBlank()) {
+                body.append(",\"description\":\"").append(escapeJson(description)).append("\"");
+            }
+            if (targetWordCount != null && !targetWordCount.isBlank()) {
+                body.append(",\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\"");
+            }
+            body.append("}");
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters";
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body.toString(), headers), String.class);
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 return "Error: Wryterio API returned " + response.getStatusCode();
             }
@@ -527,7 +539,11 @@ public class WryterioOracle {
             for (Map<String, Object> c : chapters) {
                 int index = ((Number) c.getOrDefault("index", 0)).intValue();
                 String title = String.valueOf(c.getOrDefault("title", ""));
-                sb.append("  ").append(index).append(". ").append(title).append("\n");
+                String targetWordCount = String.valueOf(c.getOrDefault("targetWordCount", ""));
+                if ("null".equals(targetWordCount)) targetWordCount = "";
+                sb.append("  ").append(index).append(". ").append(title);
+                if (!targetWordCount.isEmpty()) sb.append(" [target: ").append(targetWordCount).append(" words]");
+                sb.append("\n");
             }
             return sb.toString();
         } catch (Exception e) {
@@ -536,7 +552,8 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_fetch_wryterio_chapter", description = """
-            Fetch a single chapter from Wryterio by 1-based index. Use ChatDM_list_wryterio_chapters first to get indices.
+            Fetch a single chapter from Wryterio by 1-based index. Returns markdown content only.
+            Use ChatDM_get_wryterio_chapter to read title, description, targetWordCount.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -570,6 +587,51 @@ public class WryterioOracle {
             return response.getBody() != null ? response.getBody() : "";
         } catch (Exception e) {
             return "Error fetching chapter: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_get_wryterio_chapter", description = """
+            Read chapter metadata (title, description, targetWordCount) and optionally content from Wryterio.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - chapterIndex: Required. 1-based chapter number
+            """)
+    public String getWryterioChapter(String wryterioToken, String bookId, int chapterIndex) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (chapterIndex < 1) return "Error: chapterIndex must be >= 1.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters/" + chapterIndex + "?format=json";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> ch = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            String title = String.valueOf(ch.getOrDefault("title", ""));
+            String description = String.valueOf(ch.getOrDefault("description", ""));
+            if ("null".equals(description)) description = "";
+            String targetWordCount = String.valueOf(ch.getOrDefault("targetWordCount", ""));
+            if ("null".equals(targetWordCount)) targetWordCount = "";
+            int contentLen = 0;
+            Object contentObj = ch.get("content");
+            if (contentObj != null) {
+                String content = contentObj.toString();
+                contentLen = content.length();
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append("Chapter ").append(chapterIndex).append(": ").append(title).append("\n");
+            sb.append("Description: ").append(description.isEmpty() ? "(none)" : description).append("\n");
+            sb.append("Target word count: ").append(targetWordCount.isEmpty() ? "(none)" : targetWordCount).append("\n");
+            sb.append("Content length: ").append(contentLen).append(" chars");
+            return sb.toString();
+        } catch (Exception e) {
+            return "Error getting chapter: " + e.getMessage();
         }
     }
 
