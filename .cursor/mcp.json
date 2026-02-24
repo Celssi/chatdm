@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "chatdm_cloud": {
-      "url": "https://chatdm-334017779319.europe-north1.run.app/mcp",
-      "transportType": "streamable-http"
+      "url": "https://chatdm-334017779319.europe-north1.run.app",
+      "transportType": "sse"
     }
   }
 }
