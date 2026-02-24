@@ -22,6 +22,13 @@ description: Manages novels in ChatDM - sync books to cloud, character/place/ite
 3. **List chapters** (before sync or single chapter): `ChatDM_list_wryterio_chapters` — returns index and title for each chapter.
 4. **Single chapter from Wryterio**: `ChatDM_fetch_wryterio_chapter` — fetches one chapter by index (1-based). Use when book is too large or user wants only one chapter.
 
+### Writing to Wryterio (two-way integration)
+
+- **Create book**: `ChatDM_create_wryterio_book` — title
+- **Get/update metadata**: `ChatDM_get_wryterio_book`, `ChatDM_update_wryterio_book` — title, author, description
+- **Add/update chapters**: `ChatDM_add_wryterio_chapter`, `ChatDM_update_wryterio_chapter` — content as markdown
+- **Story elements**: `ChatDM_list_wryterio_story_elements`, `ChatDM_add_wryterio_story_element`, `ChatDM_update_wryterio_story_element`, `ChatDM_delete_wryterio_story_element`
+
 ### Managing Bios
 
 - **Save**: `ChatDM_save_book_bio` — bookName, bioType (character/place/item), name, bio

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -75,6 +76,332 @@ public class WryterioOracle {
         } catch (Exception e) {
             return "Error fetching Wryterio books: " + e.getMessage();
         }
+    }
+
+    @Tool(name = "ChatDM_get_wryterio_book", description = """
+            Fetch book metadata (title, author, description, chapter count) from Wryterio.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            """)
+    public String getWryterioBook(String wryterioToken, String bookId) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> book = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            return String.format("Book: %s (id: %s)\nAuthor: %s\nDescription: %s\nChapters: %d",
+                    book.get("title"), book.get("id"), book.getOrDefault("author", ""), book.getOrDefault("description", ""),
+                    ((Number) book.getOrDefault("chapterCount", 0)).intValue());
+        } catch (Exception e) {
+            return "Error fetching book: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_update_wryterio_book", description = """
+            Update book metadata (title, author, description) in Wryterio.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - title: Optional. New title
+            - author: Optional. New author (pass empty to clear)
+            - description: Optional. New description (pass empty to clear)
+            """)
+    public String updateWryterioBook(String wryterioToken, String bookId, String title, String author, String description) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+        if ((title == null || title.isBlank()) && author == null && description == null) {
+            return "Error: At least one of title, author, or description is required.";
+        }
+
+        try {
+            StringBuilder body = new StringBuilder("{");
+            boolean first = true;
+            if (title != null && !title.isBlank()) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
+            if (author != null) { if (!first) body.append(","); body.append("\"author\":").append(author.isBlank() ? "null" : "\"" + escapeJson(author) + "\""); first = false; }
+            if (description != null) { if (!first) body.append(","); body.append("\"description\":").append(description.isBlank() ? "null" : "\"" + escapeJson(description) + "\""); }
+            body.append("}");
+
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body.toString(), headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            return "Book metadata updated.";
+        } catch (Exception e) {
+            return "Error updating book: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_create_wryterio_book", description = """
+            Create a new book in Wryterio.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - title: Required. Book title
+            """)
+    public String createWryterioBook(String wryterioToken, String title) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (title == null || title.isBlank()) return "Error: title is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String body = "{\"title\":\"" + escapeJson(title.trim()) + "\"}";
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> result = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            return String.format("Book created: %s (id: %s)", result.get("title"), result.get("id"));
+        } catch (Exception e) {
+            return "Error creating book: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_update_wryterio_chapter", description = """
+            Update a chapter in Wryterio. Content as markdown.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - chapterIndex: Required. 1-based chapter number
+            - title: Optional. New chapter title
+            - content: Optional. New chapter content (markdown)
+            """)
+    public String updateWryterioChapter(String wryterioToken, String bookId, int chapterIndex, String title, String content) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (chapterIndex < 1) return "Error: chapterIndex must be >= 1.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+        if ((title == null || title.isBlank()) && (content == null || content.isBlank())) {
+            return "Error: At least one of title or content is required.";
+        }
+
+        try {
+            StringBuilder body = new StringBuilder("{");
+            boolean first = true;
+            if (title != null && !title.isBlank()) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
+            if (content != null) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); }
+            body.append("}");
+
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters/" + chapterIndex;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body.toString(), headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            return "Chapter " + chapterIndex + " updated.";
+        } catch (Exception e) {
+            return "Error updating chapter: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_add_wryterio_chapter", description = """
+            Add a new chapter to a Wryterio book.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - title: Required. Chapter title
+            - content: Optional. Chapter content (markdown)
+            """)
+    public String addWryterioChapter(String wryterioToken, String bookId, String title, String content) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (title == null || title.isBlank()) return "Error: title is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String body = "{\"title\":\"" + escapeJson(title.trim()) + "\"";
+            if (content != null && !content.isBlank()) {
+                body += ",\"content\":\"" + escapeJson(content) + "\"";
+            }
+            body += "}";
+
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> result = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            return String.format("Chapter added: %s (index: %s)", result.get("title"), result.get("index"));
+        } catch (Exception e) {
+            return "Error adding chapter: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_list_wryterio_story_elements", description = """
+            List story elements (characters, places, items) for a Wryterio book.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            """)
+    public String listWryterioStoryElements(String wryterioToken, String bookId) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            List<Map<String, Object>> elements = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            if (elements == null || elements.isEmpty()) return "No story elements found.";
+
+            StringBuilder sb = new StringBuilder("Wryterio story elements:\n");
+            for (Map<String, Object> el : elements) {
+                sb.append("  - ").append(el.get("name")).append(" [").append(el.get("type")).append("] (id: ").append(el.get("id")).append(")\n");
+                String bio = String.valueOf(el.getOrDefault("bio", ""));
+                if (!bio.isEmpty() && !"null".equals(bio)) {
+                    sb.append("    ").append(bio.length() > 80 ? bio.substring(0, 80) + "..." : bio).append("\n");
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "Error listing story elements: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_add_wryterio_story_element", description = """
+            Add a story element (character, place, item) to a Wryterio book.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - name: Required. Element name
+            - description: Optional. Bio/description
+            - type: Required. One of: character, place, item
+            """)
+    public String addWryterioStoryElement(String wryterioToken, String bookId, String name, String description, String type) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (name == null || name.isBlank()) return "Error: name is required.";
+        if (type == null || !java.util.Set.of("character", "place", "item").contains(type.toLowerCase())) {
+            return "Error: type must be one of: character, place, item.";
+        }
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String body = "{\"name\":\"" + escapeJson(name.trim()) + "\",\"description\":\"" + escapeJson(description != null ? description : "") + "\",\"type\":\"" + type.toLowerCase() + "\"}";
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> result = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            return String.format("Story element added: %s [%s] (id: %s)", result.get("name"), result.get("type"), result.get("id"));
+        } catch (Exception e) {
+            return "Error adding story element: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_update_wryterio_story_element", description = """
+            Update a story element in Wryterio.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - elementId: Required. Story element ID
+            - name: Optional. New name
+            - description: Optional. New description
+            - type: Optional. New type (character, place, item)
+            """)
+    public String updateWryterioStoryElement(String wryterioToken, String bookId, String elementId, String name, String description, String type) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (elementId == null || elementId.isBlank()) return "Error: elementId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+        if ((name == null || name.isBlank()) && description == null && (type == null || type.isBlank())) {
+            return "Error: At least one of name, description, or type is required.";
+        }
+        if (type != null && !type.isBlank() && !java.util.Set.of("character", "place", "item").contains(type.toLowerCase())) {
+            return "Error: type must be one of: character, place, item.";
+        }
+
+        try {
+            StringBuilder body = new StringBuilder("{");
+            boolean first = true;
+            if (name != null && !name.isBlank()) { body.append("\"name\":\"").append(escapeJson(name)).append("\""); first = false; }
+            if (description != null) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
+            if (type != null && !type.isBlank()) { if (!first) body.append(","); body.append("\"type\":\"").append(type.toLowerCase()).append("\""); }
+            body.append("}");
+
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements/" + elementId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body.toString(), headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            return "Story element updated.";
+        } catch (Exception e) {
+            return "Error updating story element: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_delete_wryterio_story_element", description = """
+            Delete a story element from a Wryterio book.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - elementId: Required. Story element ID
+            """)
+    public String deleteWryterioStoryElement(String wryterioToken, String bookId, String elementId) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (elementId == null || elementId.isBlank()) return "Error: elementId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements/" + elementId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            return "Story element deleted.";
+        } catch (Exception e) {
+            return "Error deleting story element: " + e.getMessage();
+        }
+    }
+
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 
     @Tool(name = "ChatDM_search_wryterio_books", description = """
