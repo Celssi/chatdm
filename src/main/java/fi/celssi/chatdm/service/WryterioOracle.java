@@ -126,7 +126,8 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_fetch_wryterio_book", description = """
-            Fetch full book markdown from Wryterio.
+            Fetch full book markdown from Wryterio. Returns raw markdown only—does NOT save to storage.
+            To load/save a book for later use, use ChatDM_sync_wryterio_book_to_cloud instead.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -161,7 +162,7 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_sync_wryterio_book_to_cloud", description = """
-            Fetch book from Wryterio and sync to cloud storage in one call.
+            Fetch book from Wryterio and SAVE all chapters to cloud storage. Use this when user wants to load/lataa a book for later use (reading chapters, bios, prompts). Splits markdown into numbered chapter files.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
