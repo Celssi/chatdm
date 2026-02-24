@@ -1,50 +1,30 @@
 package fi.celssi.chatdm.service;
 
-import jakarta.annotation.PostConstruct;
+import fi.celssi.chatdm.storage.JournalStorage;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Service
 public class JournalOracle {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private final Path charactersDir;
-    private final Path adventuresDir;
-    private final Path npcsDir;
-    private final Path campaignsDir;
-    private final Path locationsDir;
+    private static final String CHARACTERS = "characters";
+    private static final String ADVENTURES = "adventures";
+    private static final String NPCS = "npcs";
+    private static final String CAMPAIGNS = "campaigns";
+    private static final String LOCATIONS = "locations";
 
-    public JournalOracle() {
-        // Use the user home directory to avoid permission issues
-        String userHome = System.getProperty("user.home");
-        Path baseDir = Paths.get(userHome, ".chatdm", "journal");
-        this.charactersDir = baseDir.resolve("characters");
-        this.adventuresDir = baseDir.resolve("adventures");
-        this.npcsDir = baseDir.resolve("npcs");
-        this.campaignsDir = baseDir.resolve("campaigns");
-        this.locationsDir = baseDir.resolve("locations");
-    }
+    private final JournalStorage storage;
 
-    @PostConstruct
-    public void init() throws IOException {
-        // Create directories if they don't exist
-        Files.createDirectories(charactersDir);
-        Files.createDirectories(adventuresDir);
-        Files.createDirectories(npcsDir);
-        Files.createDirectories(campaignsDir);
-        Files.createDirectories(locationsDir);
+    public JournalOracle(JournalStorage storage) {
+        this.storage = storage;
     }
 
     @Tool(name = "ChatDM_save_character", description = """
@@ -71,11 +51,11 @@ public class JournalOracle {
 
         try {
             String sanitizedName = sanitizeFilename(characterName);
-            Path characterPath = charactersDir.resolve(sanitizedName + ".txt");
+            String fileName = sanitizedName + ".txt";
 
             // Check if character exists to preserve creation date
-            boolean isUpdate = Files.exists(characterPath);
-            String createdDate = isUpdate ? extractValue(Files.readString(characterPath), "CREATED:") : LocalDateTime.now().format(DATE_FORMAT);
+            boolean isUpdate = storage.exists(CHARACTERS, fileName);
+            String createdDate = isUpdate ? extractValue(storage.read(CHARACTERS, fileName), "CREATED:") : LocalDateTime.now().format(DATE_FORMAT);
 
             StringBuilder contentBuilder = new StringBuilder();
             contentBuilder.append(String.format("""
@@ -93,8 +73,8 @@ public class JournalOracle {
                     %s
                     """, characterData));
 
-            Files.writeString(characterPath, contentBuilder.toString());
-            return String.format("Character '%s' saved successfully to %s", characterName, characterPath);
+            storage.write(CHARACTERS, fileName, contentBuilder.toString());
+            return String.format("Character '%s' saved successfully", characterName);
         } catch (IOException e) {
             return "Error saving character: " + e.getMessage();
         }
@@ -114,13 +94,14 @@ public class JournalOracle {
 
         try {
             String sanitizedName = sanitizeFilename(characterName);
-            Path characterPath = charactersDir.resolve(sanitizedName + ".txt");
+            String fileName = sanitizedName + ".txt";
 
-            if (!Files.exists(characterPath)) {
+            String content = storage.read(CHARACTERS, fileName);
+            if (content == null) {
                 return String.format("Error: Character '%s' not found. Use ChatDM_list_characters to see available characters.", characterName);
             }
 
-            return Files.readString(characterPath);
+            return content;
         } catch (IOException e) {
             return "Error loading character: " + e.getMessage();
         }
@@ -135,55 +116,47 @@ public class JournalOracle {
             """)
     public String listCharacters(String campaignName) {
         try {
-            Path charactersPath = charactersDir;
+            List<String> fileNames = storage.list(CHARACTERS);
+            List<String> characters = fileNames.stream()
+                    .filter(f -> f.endsWith(".txt"))
+                    .map(fileName -> {
+                        try {
+                            String content = storage.read(CHARACTERS, fileName);
+                            if (content == null) return null;
+                            String name = extractValue(content, "CHARACTER:");
+                            String gameSystem = extractValue(content, "GAME SYSTEM:");
+                            String campaign = extractValue(content, "CAMPAIGN:");
 
-            if (!Files.exists(charactersPath)) {
-                return "No characters directory found.";
-            }
-
-            try (Stream<Path> paths = Files.list(charactersPath)) {
-                List<String> characters = paths
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.toString().endsWith(".txt"))
-                        .map(path -> {
-                            try {
-                                String content = Files.readString(path);
-                                String name = extractValue(content, "CHARACTER:");
-                                String gameSystem = extractValue(content, "GAME SYSTEM:");
-                                String campaign = extractValue(content, "CAMPAIGN:");
-
-                                // Filter by campaign if specified
-                                if (campaignName != null && !campaignName.trim().isEmpty()) {
-                                    String sanitizedCampaign = sanitizeFilename(campaignName);
-                                    String sanitizedFileCampaign = campaign.equals("Unknown") ? null : sanitizeFilename(campaign);
-                                    if (sanitizedFileCampaign == null || !sanitizedFileCampaign.equals(sanitizedCampaign)) {
-                                        return null;
-                                    }
+                            if (campaignName != null && !campaignName.trim().isEmpty()) {
+                                String sanitizedCampaign = sanitizeFilename(campaignName);
+                                String sanitizedFileCampaign = campaign.equals("Unknown") ? null : sanitizeFilename(campaign);
+                                if (sanitizedFileCampaign == null || !sanitizedFileCampaign.equals(sanitizedCampaign)) {
+                                    return null;
                                 }
-
-                                String campaignInfo = campaign.equals("Unknown") ? "" : " [Campaign: " + campaign + "]";
-                                return String.format("  - %s [%s]%s", name, gameSystem, campaignInfo);
-                            } catch (IOException e) {
-                                return "  - " + path.getFileName().toString() + " [error reading]";
                             }
-                        })
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toList());
 
-                if (characters.isEmpty()) {
-                    if (campaignName != null && !campaignName.trim().isEmpty()) {
-                        return String.format("No characters found for campaign '%s'.", campaignName);
-                    } else {
-                        return "No characters saved yet.";
-                    }
+                            String campaignInfo = campaign.equals("Unknown") ? "" : " [Campaign: " + campaign + "]";
+                            return String.format("  - %s [%s]%s", name, gameSystem, campaignInfo);
+                        } catch (IOException e) {
+                            return "  - " + fileName + " [error reading]";
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            if (characters.isEmpty()) {
+                if (campaignName != null && !campaignName.trim().isEmpty()) {
+                    return String.format("No characters found for campaign '%s'.", campaignName);
+                } else {
+                    return "No characters saved yet.";
                 }
-
-                String header = campaignName != null && !campaignName.trim().isEmpty()
-                        ? String.format("Characters for Campaign '%s':\n", campaignName)
-                        : "Saved Characters:\n";
-
-                return header + String.join("\n", characters);
             }
+
+            String header = campaignName != null && !campaignName.trim().isEmpty()
+                    ? String.format("Characters for Campaign '%s':\n", campaignName)
+                    : "Saved Characters:\n";
+
+            return header + String.join("\n", characters);
         } catch (IOException e) {
             return "Error listing characters: " + e.getMessage();
         }
@@ -210,7 +183,7 @@ public class JournalOracle {
         try {
             String sanitizedName = sanitizeFilename(adventureName);
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-            Path adventurePath = adventuresDir.resolve(timestamp + "_" + sanitizedName + ".md");
+            String fileName = timestamp + "_" + sanitizedName + ".md";
 
             StringBuilder content = new StringBuilder();
             content.append("# ").append(adventureName).append("\n\n");
@@ -228,8 +201,8 @@ public class JournalOracle {
 
             content.append("## Adventure Log\n\n");
 
-            Files.writeString(adventurePath, content.toString());
-            return String.format("Adventure '%s' started. Log file: %s", adventureName, adventurePath);
+            storage.write(ADVENTURES, fileName, content.toString());
+            return String.format("Adventure '%s' started.", adventureName);
         } catch (IOException e) {
             return "Error starting adventure: " + e.getMessage();
         }
@@ -252,17 +225,16 @@ public class JournalOracle {
         }
 
         try {
-            String sanitizedName = sanitizeFilename(adventureName);
-            Path adventurePath = findLatestAdventure(sanitizedName);
+            String latestFile = findLatestAdventureFile(sanitizeFilename(adventureName));
 
-            if (adventurePath == null) {
+            if (latestFile == null) {
                 return String.format("Error: No adventure found with name '%s'. Use ChatDM_start_adventure first.", adventureName);
             }
 
             String logEntry = String.format("### %s\n\n%s\n\n",
                     LocalDateTime.now().format(DATE_FORMAT), event);
 
-            Files.writeString(adventurePath, logEntry, StandardOpenOption.APPEND);
+            storage.append(ADVENTURES, latestFile, logEntry);
             return String.format("Event logged to '%s'", adventureName);
         } catch (IOException e) {
             return "Error logging event: " + e.getMessage();
@@ -275,36 +247,32 @@ public class JournalOracle {
             """)
     public String listAdventures() {
         try {
-            Path adventuresPath = adventuresDir;
+            List<String> fileNames = storage.list(ADVENTURES).stream()
+                    .filter(f -> f.endsWith(".md"))
+                    .sorted((a, b) -> b.compareTo(a))
+                    .toList();
 
-            if (!Files.exists(adventuresPath)) {
-                return "No adventures directory found.";
+            List<String> adventures = fileNames.stream()
+                    .map(fileName -> {
+                        try {
+                            String content = storage.read(ADVENTURES, fileName);
+                            if (content == null) return null;
+                            String name = extractMarkdownTitle(content);
+                            String gameSystem = extractValue(content, "**Game System:**");
+                            String started = extractValue(content, "**Started:**");
+                            return String.format("  - %s [%s] - %s", name, gameSystem, started);
+                        } catch (IOException e) {
+                            return "  - " + fileName + " [error reading]";
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            if (adventures.isEmpty()) {
+                return "No adventures logged yet.";
             }
 
-            try (Stream<Path> paths = Files.list(adventuresPath)) {
-                List<String> adventures = paths
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.toString().endsWith(".md"))
-                        .sorted((a, b) -> b.getFileName().toString().compareTo(a.getFileName().toString()))
-                        .map(path -> {
-                            try {
-                                String content = Files.readString(path);
-                                String name = extractMarkdownTitle(content);
-                                String gameSystem = extractValue(content, "**Game System:**");
-                                String started = extractValue(content, "**Started:**");
-                                return String.format("  - %s [%s] - %s", name, gameSystem, started);
-                            } catch (IOException e) {
-                                return "  - " + path.getFileName().toString() + " [error reading]";
-                            }
-                        })
-                        .collect(Collectors.toList());
-
-                if (adventures.isEmpty()) {
-                    return "No adventures logged yet.";
-                }
-
-                return "Adventure Journals:\n" + String.join("\n", adventures);
-            }
+            return "Adventure Journals:\n" + String.join("\n", adventures);
         } catch (IOException e) {
             return "Error listing adventures: " + e.getMessage();
         }
@@ -323,44 +291,38 @@ public class JournalOracle {
         }
 
         try {
-            Path adventuresPath = adventuresDir;
+            List<String> fileNames = storage.list(ADVENTURES).stream()
+                    .filter(f -> f.endsWith(".md"))
+                    .sorted((a, b) -> b.compareTo(a))
+                    .toList();
 
-            if (!Files.exists(adventuresPath)) {
-                return "No adventures directory found.";
-            }
+            List<String> adventures = fileNames.stream()
+                    .map(fileName -> {
+                        try {
+                            String content = storage.read(ADVENTURES, fileName);
+                            if (content == null) return null;
+                            String adventureCampaign = extractCampaignName(content);
 
-            try (Stream<Path> paths = Files.list(adventuresPath)) {
-                List<String> adventures = paths
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.toString().endsWith(".md"))
-                        .sorted((a, b) -> b.getFileName().toString().compareTo(a.getFileName().toString()))
-                        .map(path -> {
-                            try {
-                                String content = Files.readString(path);
-                                String adventureCampaign = extractCampaignName(content);
-
-                                // Filter by campaign name (case-insensitive comparison)
-                                if (adventureCampaign == null || !adventureCampaign.equalsIgnoreCase(campaignName.trim())) {
-                                    return null;
-                                }
-
-                                String name = extractMarkdownTitle(content);
-                                String gameSystem = extractValue(content, "**Game System:**");
-                                String started = extractValue(content, "**Started:**");
-                                return String.format("  - %s [%s] - %s", name, gameSystem, started);
-                            } catch (IOException e) {
-                                return null; // Skip files with errors
+                            if (adventureCampaign == null || !adventureCampaign.equalsIgnoreCase(campaignName.trim())) {
+                                return null;
                             }
-                        })
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toList());
 
-                if (adventures.isEmpty()) {
-                    return String.format("No adventures found for campaign '%s'.", campaignName);
-                }
+                            String name = extractMarkdownTitle(content);
+                            String gameSystem = extractValue(content, "**Game System:**");
+                            String started = extractValue(content, "**Started:**");
+                            return String.format("  - %s [%s] - %s", name, gameSystem, started);
+                        } catch (IOException e) {
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
 
-                return String.format("Adventures for Campaign '%s':\n%s", campaignName, String.join("\n", adventures));
+            if (adventures.isEmpty()) {
+                return String.format("No adventures found for campaign '%s'.", campaignName);
             }
+
+            return String.format("Adventures for Campaign '%s':\n%s", campaignName, String.join("\n", adventures));
         } catch (IOException e) {
             return "Error listing adventures by campaign: " + e.getMessage();
         }
@@ -380,13 +342,14 @@ public class JournalOracle {
 
         try {
             String sanitizedName = sanitizeFilename(adventureName);
-            Path adventurePath = findLatestAdventure(sanitizedName);
+            String latestFile = findLatestAdventureFile(sanitizedName);
 
-            if (adventurePath == null) {
+            if (latestFile == null) {
                 return String.format("Error: No adventure found with name '%s'. Use ChatDM_list_adventures to see available adventures.", adventureName);
             }
 
-            return Files.readString(adventurePath);
+            String content = storage.read(ADVENTURES, latestFile);
+            return content != null ? content : "Error reading adventure.";
         } catch (IOException e) {
             return "Error reading adventure: " + e.getMessage();
         }
@@ -432,7 +395,7 @@ public class JournalOracle {
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
             String sanitizedNpc = sanitizeFilename(npcName);
-            Path npcPath = npcsDir.resolve(sanitizedCampaign + "_" + sanitizedNpc + ".txt");
+            String fileName = sanitizedCampaign + "_" + sanitizedNpc + ".txt";
 
             String content = String.format("""
                             CAMPAIGN: %s
@@ -441,10 +404,10 @@ public class JournalOracle {
                             LAST_UPDATED: %s
                             
                             %s
-                            """, campaignName, npcName, LocalDateTime.now().format(DATE_FORMAT),
+                            """, campaignName, npcName,                     LocalDateTime.now().format(DATE_FORMAT),
                     LocalDateTime.now().format(DATE_FORMAT), npcData);
 
-            Files.writeString(npcPath, content);
+            storage.write(NPCS, fileName, content);
             return String.format("NPC '%s' saved for campaign '%s'", npcName, campaignName);
         } catch (IOException e) {
             return "Error saving NPC: " + e.getMessage();
@@ -473,13 +436,14 @@ public class JournalOracle {
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
             String sanitizedNpc = sanitizeFilename(npcName);
-            Path npcPath = npcsDir.resolve(sanitizedCampaign + "_" + sanitizedNpc + ".txt");
+            String fileName = sanitizedCampaign + "_" + sanitizedNpc + ".txt";
 
-            if (!Files.exists(npcPath)) {
+            String content = storage.read(NPCS, fileName);
+            if (content == null) {
                 return String.format("Error: NPC '%s' not found for campaign '%s'. Use ChatDM_list_npcs to see available NPCs.", npcName, campaignName);
             }
 
-            return Files.readString(npcPath);
+            return content;
         } catch (IOException e) {
             return "Error loading NPC: " + e.getMessage();
         }
@@ -519,14 +483,14 @@ public class JournalOracle {
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
             String sanitizedNpc = sanitizeFilename(npcName);
-            Path npcPath = npcsDir.resolve(sanitizedCampaign + "_" + sanitizedNpc + ".txt");
+            String fileName = sanitizedCampaign + "_" + sanitizedNpc + ".txt";
 
-            if (!Files.exists(npcPath)) {
+            String existingContent = storage.read(NPCS, fileName);
+            if (existingContent == null) {
                 return String.format("Error: NPC '%s' not found for campaign '%s'. Use ChatDM_save_npc to create a new NPC.", npcName, campaignName);
             }
 
             // Read existing content to preserve creation date
-            String existingContent = Files.readString(npcPath);
             String createdDate = extractValue(existingContent, "CREATED:");
             String campaign = extractValue(existingContent, "CAMPAIGN:");
 
@@ -545,7 +509,7 @@ public class JournalOracle {
                             """, campaign, npcName, createdDate,
                     LocalDateTime.now().format(DATE_FORMAT), npcData);
 
-            Files.writeString(npcPath, content);
+            storage.write(NPCS, fileName, content);
             return String.format("NPC '%s' updated for campaign '%s'", npcName, campaign);
         } catch (IOException e) {
             return "Error updating NPC: " + e.getMessage();
@@ -567,19 +531,13 @@ public class JournalOracle {
             """)
     public String listNpcs(String campaignName) {
         try {
-            Path npcsPath = npcsDir;
+            List<String> fileNames = storage.list(NPCS);
 
-            if (!Files.exists(npcsPath)) {
-                return "No NPCs directory found.";
-            }
-
-            try (Stream<Path> paths = Files.list(npcsPath)) {
-                List<String> npcs = paths
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.toString().endsWith(".txt"))
-                        .map(path -> {
-                            try {
-                                String content = Files.readString(path);
+            List<String> npcs = fileNames.stream()
+                    .filter(f -> f.endsWith(".txt"))
+                    .map(fileName -> {
+                        try {
+                            String content = storage.read(NPCS, fileName);
                                 String campaign = extractValue(content, "CAMPAIGN:");
                                 String npcName = extractValue(content, "NPC:");
                                 String created = extractValue(content, "CREATED:");
@@ -595,27 +553,26 @@ public class JournalOracle {
 
                                 return String.format("  - %s [%s] - Created: %s", npcName, campaign, created);
                             } catch (IOException e) {
-                                return "  - " + path.getFileName().toString() + " [error reading]";
+                                return "  - " + fileName + " [error reading]";
                             }
                         })
-                        .filter(Objects::nonNull)
-                        .sorted()
-                        .collect(Collectors.toList());
+                    .filter(Objects::nonNull)
+                    .sorted()
+                    .toList();
 
-                if (npcs.isEmpty()) {
-                    if (campaignName != null && !campaignName.trim().isEmpty()) {
-                        return String.format("No NPCs found for campaign '%s'.", campaignName);
-                    } else {
-                        return "No NPCs saved yet.";
-                    }
+            if (npcs.isEmpty()) {
+                if (campaignName != null && !campaignName.trim().isEmpty()) {
+                    return String.format("No NPCs found for campaign '%s'.", campaignName);
+                } else {
+                    return "No NPCs saved yet.";
                 }
-
-                String header = campaignName != null && !campaignName.trim().isEmpty()
-                        ? String.format("NPCs for Campaign '%s':\n", campaignName)
-                        : "All Saved NPCs:\n";
-
-                return header + String.join("\n", npcs);
             }
+
+            String header = campaignName != null && !campaignName.trim().isEmpty()
+                    ? String.format("NPCs for Campaign '%s':\n", campaignName)
+                    : "All Saved NPCs:\n";
+
+            return header + String.join("\n", npcs);
         } catch (IOException e) {
             return "Error listing NPCs: " + e.getMessage();
         }
@@ -685,7 +642,7 @@ public class JournalOracle {
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
             String sanitizedLocation = sanitizeFilename(locationName);
-            Path locationPath = locationsDir.resolve(sanitizedCampaign + "_" + sanitizedLocation + ".txt");
+            String fileName = sanitizedCampaign + "_" + sanitizedLocation + ".txt";
 
             String content = String.format("""
                             CAMPAIGN: %s
@@ -697,7 +654,7 @@ public class JournalOracle {
                             """, campaignName, locationName, LocalDateTime.now().format(DATE_FORMAT),
                     LocalDateTime.now().format(DATE_FORMAT), locationData);
 
-            Files.writeString(locationPath, content);
+            storage.write(LOCATIONS, fileName, content);
             return String.format("Location '%s' saved for campaign '%s'", locationName, campaignName);
         } catch (IOException e) {
             return "Error saving location: " + e.getMessage();
@@ -726,13 +683,14 @@ public class JournalOracle {
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
             String sanitizedLocation = sanitizeFilename(locationName);
-            Path locationPath = locationsDir.resolve(sanitizedCampaign + "_" + sanitizedLocation + ".txt");
+            String fileName = sanitizedCampaign + "_" + sanitizedLocation + ".txt";
 
-            if (!Files.exists(locationPath)) {
+            String content = storage.read(LOCATIONS, fileName);
+            if (content == null) {
                 return String.format("Error: Location '%s' not found for campaign '%s'. Use ChatDM_list_locations to see available locations.", locationName, campaignName);
             }
 
-            return Files.readString(locationPath);
+            return content;
         } catch (IOException e) {
             return "Error loading location: " + e.getMessage();
         }
@@ -772,14 +730,14 @@ public class JournalOracle {
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
             String sanitizedLocation = sanitizeFilename(locationName);
-            Path locationPath = locationsDir.resolve(sanitizedCampaign + "_" + sanitizedLocation + ".txt");
+            String fileName = sanitizedCampaign + "_" + sanitizedLocation + ".txt";
 
-            if (!Files.exists(locationPath)) {
+            String existingContent = storage.read(LOCATIONS, fileName);
+            if (existingContent == null) {
                 return String.format("Error: Location '%s' not found for campaign '%s'. Use ChatDM_save_location to create a new location.", locationName, campaignName);
             }
 
             // Read existing content to preserve creation date
-            String existingContent = Files.readString(locationPath);
             String createdDate = extractValue(existingContent, "CREATED:");
             String campaign = extractValue(existingContent, "CAMPAIGN:");
 
@@ -798,7 +756,7 @@ public class JournalOracle {
                             """, campaign, locationName, createdDate,
                     LocalDateTime.now().format(DATE_FORMAT), locationData);
 
-            Files.writeString(locationPath, content);
+            storage.write(LOCATIONS, fileName, content);
             return String.format("Location '%s' updated for campaign '%s'", locationName, campaign);
         } catch (IOException e) {
             return "Error updating location: " + e.getMessage();
@@ -821,19 +779,13 @@ public class JournalOracle {
             """)
     public String listLocations(String campaignName) {
         try {
-            Path locationsPath = locationsDir;
+            List<String> fileNames = storage.list(LOCATIONS);
 
-            if (!Files.exists(locationsPath)) {
-                return "No locations directory found.";
-            }
-
-            try (Stream<Path> paths = Files.list(locationsPath)) {
-                List<String> locations = paths
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.toString().endsWith(".txt"))
-                        .map(path -> {
-                            try {
-                                String content = Files.readString(path);
+            List<String> locations = fileNames.stream()
+                    .filter(f -> f.endsWith(".txt"))
+                    .map(fileName -> {
+                        try {
+                            String content = storage.read(LOCATIONS, fileName);
                                 String campaign = extractValue(content, "CAMPAIGN:");
                                 String locationName = extractValue(content, "LOCATION:");
                                 String created = extractValue(content, "CREATED:");
@@ -849,27 +801,26 @@ public class JournalOracle {
 
                                 return String.format("  - %s [%s] - Created: %s", locationName, campaign, created);
                             } catch (IOException e) {
-                                return "  - " + path.getFileName().toString() + " [error reading]";
+                                return "  - " + fileName + " [error reading]";
                             }
                         })
-                        .filter(Objects::nonNull)
-                        .sorted()
-                        .collect(Collectors.toList());
+                    .filter(Objects::nonNull)
+                    .sorted()
+                    .toList();
 
-                if (locations.isEmpty()) {
-                    if (campaignName != null && !campaignName.trim().isEmpty()) {
-                        return String.format("No locations found for campaign '%s'.", campaignName);
-                    } else {
-                        return "No locations saved yet.";
-                    }
+            if (locations.isEmpty()) {
+                if (campaignName != null && !campaignName.trim().isEmpty()) {
+                    return String.format("No locations found for campaign '%s'.", campaignName);
+                } else {
+                    return "No locations saved yet.";
                 }
-
-                String header = campaignName != null && !campaignName.trim().isEmpty()
-                        ? String.format("Locations for Campaign '%s':\n", campaignName)
-                        : "All Saved Locations:\n";
-
-                return header + String.join("\n", locations);
             }
+
+            String header = campaignName != null && !campaignName.trim().isEmpty()
+                    ? String.format("Locations for Campaign '%s':\n", campaignName)
+                    : "All Saved Locations:\n";
+
+            return header + String.join("\n", locations);
         } catch (IOException e) {
             return "Error listing locations: " + e.getMessage();
         }
@@ -942,10 +893,10 @@ public class JournalOracle {
 
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
-            Path campaignPath = campaignsDir.resolve(sanitizedCampaign + "_campaign.txt");
+            String fileName = sanitizedCampaign + "_campaign.txt";
 
-            boolean isUpdate = Files.exists(campaignPath);
-            String createdDate = isUpdate ? extractValue(Files.readString(campaignPath), "CREATED:") : LocalDateTime.now().format(DATE_FORMAT);
+            boolean isUpdate = storage.exists(CAMPAIGNS, fileName);
+            String createdDate = isUpdate ? extractValue(storage.read(CAMPAIGNS, fileName), "CREATED:") : LocalDateTime.now().format(DATE_FORMAT);
 
             String content = String.format("""
                     NAME: %s
@@ -955,7 +906,7 @@ public class JournalOracle {
                     %s
                     """, campaignName, createdDate, LocalDateTime.now().format(DATE_FORMAT), campaignData);
 
-            Files.writeString(campaignPath, content);
+            storage.write(CAMPAIGNS, fileName, content);
             return String.format("Campaign %s %s", isUpdate ? "updated" : "saved", campaignName);
         } catch (IOException e) {
             return "Error saving campaign: " + e.getMessage();
@@ -983,13 +934,14 @@ public class JournalOracle {
 
         try {
             String sanitizedCampaign = sanitizeFilename(campaignName);
-            Path campaignPath = campaignsDir.resolve(sanitizedCampaign + "_campaign.txt");
+            String fileName = sanitizedCampaign + "_campaign.txt";
 
-            if (!Files.exists(campaignPath)) {
+            String content = storage.read(CAMPAIGNS, fileName);
+            if (content == null) {
                 return String.format("Error: No campaign %s found. Use ChatDM_save_campaign to create one.", campaignName);
             }
 
-            return Files.readString(campaignPath);
+            return content;
         } catch (IOException e) {
             return "Error loading campaign: " + e.getMessage();
         }
@@ -1029,53 +981,40 @@ public class JournalOracle {
             """)
     public String listCampaigns() {
         try {
-            Path campaignsPath = campaignsDir;
+            List<String> fileNames = storage.list(CAMPAIGNS);
 
-            if (!Files.exists(campaignsPath)) {
-                return "No campaigns directory found.";
+            List<String> campaigns = fileNames.stream()
+                    .filter(f -> f.endsWith("_campaign.txt"))
+                    .map(fileName -> {
+                        try {
+                            String content = storage.read(CAMPAIGNS, fileName);
+                            if (content == null) return null;
+                            String name = extractValue(content, "NAME:");
+                            String lastUpdated = extractValue(content, "LAST_UPDATED:");
+                            return String.format("  - %s - Last Updated: %s", name, lastUpdated);
+                        } catch (IOException e) {
+                            return "  - " + fileName + " [error reading]";
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .sorted()
+                    .toList();
+
+            if (campaigns.isEmpty()) {
+                return "No campaign journals saved yet.";
             }
 
-            try (Stream<Path> paths = Files.list(campaignsPath)) {
-                List<String> campaigns = paths
-                        .filter(Files::isRegularFile)
-                        .filter(p -> p.toString().endsWith("_campaign.txt"))
-                        .map(path -> {
-                            try {
-                                String content = Files.readString(path);
-                                String name = extractValue(content, "NAME:");
-                                String lastUpdated = extractValue(content, "LAST_UPDATED:");
-                                return String.format("  - %s - Last Updated: %s", name, lastUpdated);
-                            } catch (IOException e) {
-                                return "  - " + path.getFileName().toString() + " [error reading]";
-                            }
-                        })
-                        .sorted()
-                        .collect(Collectors.toList());
-
-                if (campaigns.isEmpty()) {
-                    return "No campaign journals saved yet.";
-                }
-
-                return "Campaign Journals:\n" + String.join("\n", campaigns);
-            }
+            return "Campaign Journals:\n" + String.join("\n", campaigns);
         } catch (IOException e) {
             return "Error listing campaigns: " + e.getMessage();
         }
     }
 
-    private Path findLatestAdventure(String sanitizedName) throws IOException {
-        Path adventuresPath = adventuresDir;
-
-        if (!Files.exists(adventuresPath)) {
-            return null;
-        }
-
-        try (Stream<Path> paths = Files.list(adventuresPath)) {
-            return paths
-                    .filter(Files::isRegularFile)
-                    .filter(p -> p.getFileName().toString().endsWith("_" + sanitizedName + ".md")).min((a, b) -> b.getFileName().toString().compareTo(a.getFileName().toString()))
-                    .orElse(null);
-        }
+    private String findLatestAdventureFile(String sanitizedName) throws IOException {
+        return storage.list(ADVENTURES).stream()
+                .filter(f -> f.endsWith("_" + sanitizedName + ".md"))
+                .max(String::compareTo)
+                .orElse(null);
     }
 
     private String sanitizeFilename(String name) {

@@ -1,0 +1,53 @@
+# Cloud Build - deploy ChatDM to Cloud Run on push to main
+# Requires: GCS bucket with PDFs and search_index.db, Artifact Registry repo
+
+steps:
+  # Build Docker image (Dockerfile runs mvn package; cloud profile fetches index from GCS at runtime)
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/chatdm:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/chatdm:latest'
+      - '.'
+    id: docker-build
+
+  # Push to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/chatdm:${SHORT_SHA}'
+    id: push
+    waitFor: ['docker-build']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/chatdm:latest'
+    id: push-latest
+    waitFor: ['docker-build']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'chatdm'
+      - '--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/chatdm:${SHORT_SHA}'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--timeout=3600'
+      - '--set-env-vars=SPRING_PROFILES_ACTIVE=cloud,GOOGLE_CLOUD_PROJECT=${PROJECT_ID}'
+    id: deploy
+    waitFor: ['push']
+
+substitutions:
+  _REGION: europe-north1
+  _REPOSITORY: chatdm
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -37,9 +37,7 @@ public class PdfSearchEngine {
 
     public PdfSearchEngine(PdfTextCache pdfTextCache) {
         this.pdfTextCache = pdfTextCache;
-        this.executorService = Executors.newFixedThreadPool(
-                Math.min(Runtime.getRuntime().availableProcessors(), 8)
-        );
+        this.executorService = Executors.newVirtualThreadPerTaskExecutor();
         this.analyzer = new EnglishAnalyzer();
     }
 

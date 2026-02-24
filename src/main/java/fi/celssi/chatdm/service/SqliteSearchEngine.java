@@ -3,9 +3,16 @@ package fi.celssi.chatdm.service;
 import fi.celssi.chatdm.model.SearchResult;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -16,25 +23,45 @@ import java.util.List;
 /**
  * Fast search engine using pre-built SQLite FTS5 index.
  * Provides sub-second search across all PDFs.
+ * Supports classpath (local) and GCS (cloud) index locations.
  */
 @Service
 public class SqliteSearchEngine {
 
-    private static final String DB_PATH = "search_index.db";
+    private static final String DEFAULT_DB_PATH = "search_index.db";
     private static final int SNIPPET_LENGTH = 150;
 
+    private final ResourceLoader resourceLoader;
+    private final String searchIndexPath;
+
     private Connection connection;
+    private Path tempIndexPath;
+
+    public SqliteSearchEngine(ResourceLoader resourceLoader,
+                              @Value("${chatdm.search-index.path:}") String searchIndexPath) {
+        this.resourceLoader = resourceLoader;
+        this.searchIndexPath = searchIndexPath != null && !searchIndexPath.isEmpty() ? searchIndexPath : "";
+    }
 
     @PostConstruct
     public void init() {
         try {
-            ClassPathResource dbResource = new ClassPathResource(DB_PATH);
-            String dbUrl = "jdbc:sqlite::resource:" + dbResource.getURL();
+            String dbUrl;
+            if (searchIndexPath.startsWith("gs://")) {
+                Resource dbResource = resourceLoader.getResource(searchIndexPath);
+                tempIndexPath = Files.createTempFile("search_index", ".db");
+                try (InputStream is = dbResource.getInputStream()) {
+                    Files.copy(is, tempIndexPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+                dbUrl = "jdbc:sqlite:" + tempIndexPath.toAbsolutePath();
+            } else {
+                ClassPathResource dbResource = new ClassPathResource(DEFAULT_DB_PATH);
+                dbUrl = "jdbc:sqlite::resource:" + dbResource.getURL();
+            }
             connection = DriverManager.getConnection(dbUrl);
-            // System.out.println("✓ Connected to search index: " + DB_PATH);
         } catch (Exception e) {
             System.err.println("⚠ Warning: Could not load search index. Search will be unavailable.");
-            System.err.println("  Run 'mvn process-resources' to build the search index.");
+            System.err.println("  Run 'mvn process-resources' to build the search index, or upload to GCS.");
             connection = null;
         }
     }
@@ -45,6 +72,13 @@ public class SqliteSearchEngine {
             try {
                 connection.close();
             } catch (Exception e) {
+                // Ignore
+            }
+        }
+        if (tempIndexPath != null) {
+            try {
+                Files.deleteIfExists(tempIndexPath);
+            } catch (IOException e) {
                 // Ignore
             }
         }
