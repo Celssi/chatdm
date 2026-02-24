@@ -2,7 +2,10 @@
   "mcpServers": {
     "chatdm_cloud": {
       "url": "https://chatdm-334017779319.europe-north1.run.app",
-      "transportType": "sse"
+      "transportType": "sse",
+      "headers": {
+        "X-Wryterio-Token": "wrt_ef09584cfa894e828bf801ae518b7340"
+      }
     }
   }
 }
