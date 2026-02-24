@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.stream.StreamSupport;
 
 @Component
-@Profile("cloud")
+@Profile({"cloud", "gcs"})
 public class GcsJournalStorage implements JournalStorage {
 
     private final Storage storage;

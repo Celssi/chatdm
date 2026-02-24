@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Component
-@Profile("!cloud")
+@Profile("!cloud & !gcs")
 public class LocalJournalStorage implements JournalStorage {
 
     private final Path baseDir;

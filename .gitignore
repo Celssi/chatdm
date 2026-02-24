@@ -33,9 +33,7 @@ build/
 .vscode/
 
 ### Custom ###
-src/main/resources/pdfs/brambletrek/
-src/main/resources/pdfs/my-little-pony/
-src/main/resources/pdfs/dnd/
-src/main/resources/pdfs/lotr/
+# PDFs live in GCS; ignore if anyone adds them back locally
+src/main/resources/pdfs/*/
 src/main/resources/search_index.db
 target/classes/search_index.db

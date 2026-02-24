@@ -15,12 +15,14 @@ The search index is automatically built during Maven's `process-resources` phase
 mvn clean compile
 ```
 
-This will:
+This will (when PDFs exist locally):
 
 1. Process all PDF files in `src/main/resources/pdfs/`
 2. Extract text from every page
 3. Build a SQLite FTS5 index with BM25 ranking
 4. Save the index to `target/classes/search_index.db`
+
+**Note:** PDFs are stored in GCS. Use the GCS build (see below) to index from cloud storage.
 
 ### Manual Build
 
@@ -48,12 +50,12 @@ Index build time depends on PDF count and size:
 
 The indexer processes these game systems:
 
-| Game System        | Directory              | PDFs      |
-|--------------------|------------------------|-----------|
-| The One Ring RPG   | `pdfs/lotr/`           | ~12 books |
-| D&D 5e (2024)      | `pdfs/dnd/`            | ~7 books  |
-| Brambletrek        | `pdfs/brambletrek/`    | ~4 books  |
-| My Little Pony RPG | `pdfs/my-little-pony/` | ~3 books  |
+| Game System        | Path (classpath or GCS) | PDFs      |
+|--------------------|--------------------------|-----------|
+| The One Ring RPG   | `pdfs/lotr/`             | ~12 books |
+| D&D 5e (2024)      | `pdfs/dnd/`              | ~7 books  |
+| Brambletrek        | `pdfs/brambletrek/`      | ~4 books  |
+| My Little Pony RPG | `pdfs/my-little-pony/`   | ~3 books  |
 
 ## Database Schema
 
@@ -114,7 +116,7 @@ mvn clean compile
 
 Common issues:
 
-1. **Missing PDFs**: Ensure PDFs exist in `src/main/resources/pdfs/`
+1. **Missing PDFs**: PDFs live in GCS. Use `mvn exec:java@build-search-index-gcs -Dgcs.bucket=BUCKET` to index from GCS.
 2. **Corrupted PDF**: Check console output for error messages
 3. **Out of memory**: Increase Maven memory: `export MAVEN_OPTS="-Xmx2g"`
 
@@ -162,12 +164,12 @@ RUN mvn process-resources
 
 To index a new game system:
 
-1. Add PDFs to `src/main/resources/pdfs/your-game/`
-2. Edit `PdfIndexBuilder.java` and add:
+1. Upload PDFs to GCS: `gsutil -m cp -r your-game/ gs://BUCKET/pdfs/your-game/`
+2. Edit `PdfIndexBuilder.java` and add the game system mapping, then build from GCS:
    ```java
    indexGameSystem(conn, "your-game", "pdfs/your-game");
    ```
-3. Rebuild: `mvn process-resources`
+3. Rebuild: `mvn exec:java@build-search-index-gcs -Dgcs.bucket=BUCKET`
 
 ## Performance Tips
 
