@@ -411,6 +411,83 @@ public class WryterioOracle {
         }
     }
 
+    @Tool(name = "ChatDM_get_wryterio_plot_timeline", description = """
+            Read the plot timeline (Juonen aikajana, Save the Cat structure) for a Wryterio book.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            """)
+    public String getWryterioPlotTimeline(String wryterioToken, String bookId) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/plot-timeline";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            List<Map<String, Object>> points = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            if (points == null || points.isEmpty()) return "No plot timeline points. Plot timeline is empty.";
+
+            StringBuilder sb = new StringBuilder("Plot timeline (Save the Cat):\n");
+            for (Map<String, Object> p : points) {
+                String name = String.valueOf(p.getOrDefault("name", ""));
+                String description = String.valueOf(p.getOrDefault("description", ""));
+                if ("null".equals(description)) description = "";
+                int pctStart = ((Number) p.getOrDefault("percentageStart", 0)).intValue();
+                int pctEnd = ((Number) p.getOrDefault("percentageEnd", 0)).intValue();
+                int act = ((Number) p.getOrDefault("act", 1)).intValue();
+                String notes = String.valueOf(p.getOrDefault("notes", ""));
+                if ("null".equals(notes)) notes = "";
+                sb.append("  - ").append(name).append(" (Act ").append(act).append(", ").append(pctStart).append("-").append(pctEnd).append("%)\n");
+                if (!description.isEmpty()) sb.append("    ").append(description.length() > 100 ? description.substring(0, 100) + "..." : description).append("\n");
+                if (!notes.isEmpty()) sb.append("    Notes: ").append(notes.length() > 80 ? notes.substring(0, 80) + "..." : notes).append("\n");
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "Error getting plot timeline: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_update_wryterio_plot_timeline", description = """
+            Replace the plot timeline (Juonen aikajana) for a Wryterio book. Uses Save the Cat structure.
+            Pass plotTimeline as JSON array. Each point: { name, description?, percentageStart, percentageEnd, act, notes? }
+            act: 1 (Act 1), 2 (Act 2A), 3 (Act 2B), 4 (Act 3)
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - plotTimelineJson: Required. JSON array of plot points, e.g. [{"name":"Opening Image","description":"...","percentageStart":0,"percentageEnd":5,"act":1}]
+            """)
+    public String updateWryterioPlotTimeline(String wryterioToken, String bookId, String plotTimelineJson) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (plotTimelineJson == null || plotTimelineJson.isBlank()) return "Error: plotTimelineJson is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String body = "{\"plotTimeline\":" + plotTimelineJson.trim() + "}";
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/plot-timeline";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body, headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> result = objectMapper.readValue(response.getBody() != null ? response.getBody() : "{}", new TypeReference<>() {});
+            int count = ((Number) result.getOrDefault("count", 0)).intValue();
+            return "Plot timeline updated. " + count + " point(s).";
+        } catch (Exception e) {
+            return "Error updating plot timeline: " + e.getMessage();
+        }
+    }
+
     private String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
