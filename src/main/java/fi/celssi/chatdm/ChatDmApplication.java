@@ -7,12 +7,18 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication
 public class ChatDmApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ChatDmApplication.class, args);
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 
     @Configuration
@@ -29,6 +35,9 @@ public class ChatDmApplication {
                 CardOracle cardOracle,
                 GameResourceOracle gameResourceOracle,
                 JournalOracle journalOracle,
+                NovelOracle novelOracle,
+                NovelPromptsOracle novelPromptsOracle,
+                WryterioOracle wryterioOracle,
                 BrambletrekPromptsOracle brambletrekPromptsOracle,
                 MyLittlePonyPromptsOracle myLittlePonyPromptsOracle,
                 DnDPromptsOracle dndPromptsOracle,
@@ -38,7 +47,7 @@ public class ChatDmApplication {
                     .builder()
                     .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle,
                             basicOracle, conversationOracle, cardOracle, gameResourceOracle,
-                            journalOracle, brambletrekPromptsOracle, myLittlePonyPromptsOracle,
+                            journalOracle, novelOracle, novelPromptsOracle, wryterioOracle, brambletrekPromptsOracle, myLittlePonyPromptsOracle,
                             dndPromptsOracle, theOneRingPromptsOracle, writingTools)
                     .build();
         }

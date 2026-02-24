@@ -40,4 +40,12 @@ public interface JournalStorage {
      * Append content to an existing file.
      */
     void append(String subDir, String fileName, String content) throws IOException;
+
+    /**
+     * Delete a file.
+     *
+     * @param subDir  Subdirectory (e.g. "books")
+     * @param fileName File name (e.g. "my_book_1.md")
+     */
+    void delete(String subDir, String fileName) throws IOException;
 }

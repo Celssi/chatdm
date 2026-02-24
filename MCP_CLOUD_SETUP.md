@@ -57,3 +57,25 @@ This error often means the client couldn't connect. Try:
 4. **Cold start**: First request may take 10-30s if the service was idle
 
 The server allows unauthenticated access - no API key or auth headers needed.
+
+## Novel Writing & Wryterio Integration
+
+For novel-writing tools that fetch from [Wryterio](https://wryterio.com/), add your API token via headers:
+
+```json
+{
+  "mcpServers": {
+    "chatdm_cloud": {
+      "url": "https://chatdm-334017779319.europe-north1.run.app",
+      "transportType": "sse",
+      "headers": {
+        "X-Wryterio-Token": "wrt_your_token_here"
+      }
+    }
+  }
+}
+```
+
+Generate the token in your Wryterio profile (Profile → API Token → Generate). The token is sent with each request; Wryterio tools use it when `wryterioToken` is not passed explicitly.
+
+**ChatDM server config** (for Wryterio integration): Set `chatdm.wryterio.api-url` or `WRYTERIO_API_URL` to your Wryterio deployment, e.g. `https://wryterio.com`.

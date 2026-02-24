@@ -89,4 +89,16 @@ public class GcsJournalStorage implements JournalStorage {
         String newContent = (existing != null ? existing : "") + content;
         write(subDir, fileName, newContent);
     }
+
+    @Override
+    public void delete(String subDir, String fileName) throws IOException {
+        BlobId blobId = BlobId.of(bucket, objectName(subDir, fileName));
+        try {
+            storage.delete(blobId);
+        } catch (com.google.cloud.storage.StorageException e) {
+            if (e.getCode() != 404) {
+                throw new IOException("Failed to delete " + fileName, e);
+            }
+        }
+    }
 }

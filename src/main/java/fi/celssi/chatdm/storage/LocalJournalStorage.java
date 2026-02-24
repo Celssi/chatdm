@@ -29,7 +29,7 @@ public class LocalJournalStorage implements JournalStorage {
 
     @PostConstruct
     public void init() throws IOException {
-        for (String sub : List.of("characters", "adventures", "npcs", "campaigns", "locations")) {
+        for (String sub : List.of("characters", "adventures", "npcs", "campaigns", "locations", "books")) {
             Files.createDirectories(baseDir.resolve(sub));
         }
     }
@@ -73,5 +73,13 @@ public class LocalJournalStorage implements JournalStorage {
     public void append(String subDir, String fileName, String content) throws IOException {
         Path path = baseDir.resolve(subDir).resolve(fileName);
         Files.writeString(path, content, StandardOpenOption.APPEND);
+    }
+
+    @Override
+    public void delete(String subDir, String fileName) throws IOException {
+        Path path = baseDir.resolve(subDir).resolve(fileName);
+        if (Files.exists(path)) {
+            Files.delete(path);
+        }
     }
 }
