@@ -111,10 +111,11 @@ public class NovelOracle {
     public String listBooks() {
         try {
             List<String> bookIds = new ArrayList<>(storage.listSubdirs(BOOKS));
+            final List<String> ids = bookIds;
             storage.list(BOOKS).stream()
                     .filter(f -> f.endsWith("_meta.txt"))
                     .map(f -> f.replace("_meta.txt", ""))
-                    .filter(id -> !bookIds.contains(id))
+                    .filter(id -> !ids.contains(id))
                     .forEach(bookIds::add);
             bookIds = bookIds.stream().sorted().distinct().toList();
 
