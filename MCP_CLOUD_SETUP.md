@@ -94,4 +94,6 @@ https://chatdm-334017779319.europe-north1.run.app/mcp?wryterio_token=wrt_your_to
 
 Generate the token in your Wryterio profile (Profile → API Token → Generate). The token is sent with each request; Wryterio tools use it when `wryterioToken` is not passed explicitly.
 
-**ChatDM server config** (for Wryterio integration): Set `chatdm.wryterio.api-url` or `WRYTERIO_API_URL` to your Wryterio deployment, e.g. `https://wryterio.com`.
+**ChatDM server config** (for Wryterio integration): `WRYTERIO_API_URL` is set in deploy config (default: `https://wryterio.com`). To override:
+- **Manual deploy**: `WRYTERIO_API_URL=https://your-url.com ./scripts/deploy.sh PROJECT_ID`
+- **Cloud Build**: Set substitution `_WRYTERIO_API_URL` in the Cloud Build trigger (Build configuration → Substitution variables).
