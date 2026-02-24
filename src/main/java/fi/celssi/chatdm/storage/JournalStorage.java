@@ -29,12 +29,20 @@ public interface JournalStorage {
     boolean exists(String subDir, String fileName) throws IOException;
 
     /**
-     * List file names in a subdirectory (non-recursive).
+     * List file names in a subdirectory (non-recursive, direct children only).
      *
      * @param subDir Subdirectory to list
      * @return List of file names (not paths)
      */
     List<String> list(String subDir) throws IOException;
+
+    /**
+     * List subdirectory names in a subdirectory (one level deep).
+     *
+     * @param subDir Parent subdirectory (e.g. "books")
+     * @return List of subdirectory names (e.g. "sielujen_kaivo")
+     */
+    List<String> listSubdirs(String subDir) throws IOException;
 
     /**
      * Append content to an existing file.

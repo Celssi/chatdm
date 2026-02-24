@@ -70,6 +70,21 @@ public class LocalJournalStorage implements JournalStorage {
     }
 
     @Override
+    public List<String> listSubdirs(String subDir) throws IOException {
+        Path dir = baseDir.resolve(subDir);
+        if (!Files.exists(dir)) {
+            return List.of();
+        }
+        try (Stream<Path> paths = Files.list(dir)) {
+            return paths
+                    .filter(Files::isDirectory)
+                    .map(p -> p.getFileName().toString())
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    @Override
     public void append(String subDir, String fileName, String content) throws IOException {
         Path path = baseDir.resolve(subDir).resolve(fileName);
         Files.writeString(path, content, StandardOpenOption.APPEND);

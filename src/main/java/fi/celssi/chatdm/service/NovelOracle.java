@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -19,6 +18,12 @@ public class NovelOracle {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String BOOKS = "books";
     private static final Pattern CHAPTER_SPLIT = Pattern.compile("(?m)\n## ");
+
+    private static String bookPath(String bookId) { return BOOKS + "/" + bookId; }
+    private static String chaptersPath(String bookId) { return bookPath(bookId) + "/chapters"; }
+    private static String charactersPath(String bookId) { return bookPath(bookId) + "/characters"; }
+    private static String placesPath(String bookId) { return bookPath(bookId) + "/places"; }
+    private static String itemsPath(String bookId) { return bookPath(bookId) + "/items"; }
 
     private final JournalStorage storage;
 
@@ -66,9 +71,13 @@ public class NovelOracle {
                     """, title, LocalDateTime.now().format(DATE_FORMAT),
                     LocalDateTime.now().format(DATE_FORMAT), chapters.size(), frontMatter);
 
-            boolean isUpdate = storage.exists(BOOKS, bookId + "_meta.txt");
+            boolean isUpdate = storage.exists(bookPath(bookId), "meta.txt");
+            if (!isUpdate && storage.exists(BOOKS, bookId + "_meta.txt")) {
+                isUpdate = true; // migration: old flat format
+            }
             if (isUpdate) {
-                String existingMeta = storage.read(BOOKS, bookId + "_meta.txt");
+                String existingMeta = storage.read(bookPath(bookId), "meta.txt");
+                if (existingMeta == null) existingMeta = storage.read(BOOKS, bookId + "_meta.txt");
                 if (existingMeta != null) {
                     String created = extractValue(existingMeta, "CREATED:");
                     metaContent = String.format("""
@@ -83,10 +92,10 @@ public class NovelOracle {
                 }
             }
 
-            storage.write(BOOKS, bookId + "_meta.txt", metaContent);
+            storage.write(bookPath(bookId), "meta.txt", metaContent);
 
             for (int i = 0; i < chapters.size(); i++) {
-                storage.write(BOOKS, bookId + "_" + (i + 1) + ".md", chapters.get(i));
+                storage.write(chaptersPath(bookId), (i + 1) + ".md", chapters.get(i));
             }
 
             return String.format("Book '%s' %s. %d chapters.", title, isUpdate ? "updated" : "created", chapters.size());
@@ -101,12 +110,13 @@ public class NovelOracle {
             """)
     public String listBooks() {
         try {
-            List<String> fileNames = storage.list(BOOKS);
-            List<String> bookIds = fileNames.stream()
+            List<String> bookIds = new ArrayList<>(storage.listSubdirs(BOOKS));
+            storage.list(BOOKS).stream()
                     .filter(f -> f.endsWith("_meta.txt"))
                     .map(f -> f.replace("_meta.txt", ""))
-                    .sorted()
-                    .toList();
+                    .filter(id -> !bookIds.contains(id))
+                    .forEach(bookIds::add);
+            bookIds = bookIds.stream().sorted().distinct().toList();
 
             if (bookIds.isEmpty()) {
                 return "No books saved yet.";
@@ -115,7 +125,8 @@ public class NovelOracle {
             return "Books:\n" + bookIds.stream()
                     .map(id -> {
                         try {
-                            String meta = storage.read(BOOKS, id + "_meta.txt");
+                            String meta = storage.read(bookPath(id), "meta.txt");
+                            if (meta == null) meta = storage.read(BOOKS, id + "_meta.txt");
                             String title = meta != null ? extractValue(meta, "TITLE:") : id;
                             return "  - " + title + " (id: " + id + ")";
                         } catch (IOException e) {
@@ -148,7 +159,8 @@ public class NovelOracle {
                 return "Error: Book not found. Use ChatDM_list_books to see available books.";
             }
 
-            String content = storage.read(BOOKS, bookId + "_" + chapterIndex + ".md");
+            String content = storage.read(chaptersPath(bookId), chapterIndex + ".md");
+            if (content == null) content = storage.read(BOOKS, bookId + "_" + chapterIndex + ".md");
             return content != null ? content : "Error: Chapter " + chapterIndex + " not found.";
         } catch (IOException e) {
             return "Error loading chapter: " + e.getMessage();
@@ -171,7 +183,8 @@ public class NovelOracle {
                 return "Error: Book not found. Use ChatDM_list_books to see available books.";
             }
 
-            String content = storage.read(BOOKS, bookId + "_meta.txt");
+            String content = storage.read(bookPath(bookId), "meta.txt");
+            if (content == null) content = storage.read(BOOKS, bookId + "_meta.txt");
             return content != null ? content : "Error: Metadata not found.";
         } catch (IOException e) {
             return "Error loading metadata: " + e.getMessage();
@@ -207,7 +220,12 @@ public class NovelOracle {
             }
 
             String sanitizedName = sanitizeFilename(name);
-            String fileName = bookId + "_" + bioType.toLowerCase() + "_" + sanitizedName + ".md";
+            String fileName = sanitizedName + ".md";
+            String subDir = switch (bioType.toLowerCase()) {
+                case "character" -> charactersPath(bookId);
+                case "place" -> placesPath(bookId);
+                default -> itemsPath(bookId);
+            };
 
             String content = String.format("""
                     TYPE: %s
@@ -217,7 +235,7 @@ public class NovelOracle {
                     %s
                     """, bioType.toLowerCase(), name, LocalDateTime.now().format(DATE_FORMAT), bio);
 
-            storage.write(BOOKS, fileName, content);
+            storage.write(subDir, fileName, content);
             return String.format("%s '%s' saved for book '%s'", capitalize(bioType), name, bookName);
         } catch (IOException e) {
             return "Error saving bio: " + e.getMessage();
@@ -241,28 +259,39 @@ public class NovelOracle {
                 return "Error: Book not found. Use ChatDM_list_books to see available books.";
             }
 
+            List<String> bios = new ArrayList<>();
+            for (String type : List.of("character", "place", "item")) {
+                if (bioType != null && !bioType.trim().isEmpty() && !type.equals(bioType.toLowerCase())) continue;
+                String subDir = switch (type) {
+                    case "character" -> charactersPath(bookId);
+                    case "place" -> placesPath(bookId);
+                    default -> itemsPath(bookId);
+                };
+                for (String fileName : storage.list(subDir)) {
+                    try {
+                        String content = storage.read(subDir, fileName);
+                        String name = content != null ? extractValue(content, "NAME:") : fileName.replace(".md", "");
+                        bios.add("  - " + name + " (" + type + ")");
+                    } catch (IOException e) {
+                        bios.add("  - " + fileName);
+                    }
+                }
+            }
+            // Migration: also check old flat format
             String prefix = bookId + "_";
-            List<String> fileNames = storage.list(BOOKS).stream()
-                    .filter(f -> f.startsWith(prefix) && (f.contains("_character_") || f.contains("_place_") || f.contains("_item_")))
-                    .toList();
-
-            List<String> bios = fileNames.stream()
-                    .map(fileName -> {
-                        try {
-                            String type = fileName.contains("_character_") ? "character" : fileName.contains("_place_") ? "place" : "item";
-                            if (bioType != null && !bioType.trim().isEmpty() && !type.equals(bioType.toLowerCase())) {
-                                return null;
-                            }
-                            String content = storage.read(BOOKS, fileName);
-                            String name = content != null ? extractValue(content, "NAME:") : fileName.replace(prefix + type + "_", "").replace(".md", "");
-                            return "  - " + name + " (" + type + ")";
-                        } catch (IOException e) {
-                            return "  - " + fileName;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .sorted()
-                    .toList();
+            for (String fileName : storage.list(BOOKS)) {
+                if (!fileName.startsWith(prefix) || (!fileName.contains("_character_") && !fileName.contains("_place_") && !fileName.contains("_item_"))) continue;
+                String type = fileName.contains("_character_") ? "character" : fileName.contains("_place_") ? "place" : "item";
+                if (bioType != null && !bioType.trim().isEmpty() && !type.equals(bioType.toLowerCase())) continue;
+                try {
+                    String content = storage.read(BOOKS, fileName);
+                    String name = content != null ? extractValue(content, "NAME:") : fileName.replace(prefix + type + "_", "").replace(".md", "");
+                    bios.add("  - " + name + " (" + type + ")");
+                } catch (IOException e) {
+                    bios.add("  - " + fileName);
+                }
+            }
+            bios = bios.stream().distinct().sorted().toList();
 
             if (bios.isEmpty()) {
                 return "No bios found for this book.";
@@ -299,8 +328,14 @@ public class NovelOracle {
             }
 
             String sanitizedName = sanitizeFilename(name);
-            String fileName = bookId + "_" + bioType.toLowerCase() + "_" + sanitizedName + ".md";
-            String content = storage.read(BOOKS, fileName);
+            String fileName = sanitizedName + ".md";
+            String subDir = switch (bioType.toLowerCase()) {
+                case "character" -> charactersPath(bookId);
+                case "place" -> placesPath(bookId);
+                default -> itemsPath(bookId);
+            };
+            String content = storage.read(subDir, fileName);
+            if (content == null) content = storage.read(BOOKS, bookId + "_" + bioType.toLowerCase() + "_" + sanitizedName + ".md");
             return content != null ? content : "Error: Bio not found.";
         } catch (IOException e) {
             return "Error loading bio: " + e.getMessage();
@@ -332,8 +367,14 @@ public class NovelOracle {
             }
 
             String sanitizedName = sanitizeFilename(name);
-            String fileName = bookId + "_" + bioType.toLowerCase() + "_" + sanitizedName + ".md";
-            storage.delete(BOOKS, fileName);
+            String fileName = sanitizedName + ".md";
+            String subDir = switch (bioType.toLowerCase()) {
+                case "character" -> charactersPath(bookId);
+                case "place" -> placesPath(bookId);
+                default -> itemsPath(bookId);
+            };
+            storage.delete(subDir, fileName);
+            storage.delete(BOOKS, bookId + "_" + bioType.toLowerCase() + "_" + sanitizedName + ".md"); // old format if exists
             return String.format("Bio '%s' deleted.", name);
         } catch (IOException e) {
             return "Error deleting bio: " + e.getMessage();
@@ -356,16 +397,28 @@ public class NovelOracle {
                 return "Error: Book not found.";
             }
 
-            String prefix = bookId + "_";
-            List<String> fileNames = storage.list(BOOKS).stream()
-                    .filter(f -> f.startsWith(prefix))
-                    .toList();
-
-            for (String fileName : fileNames) {
-                storage.delete(BOOKS, fileName);
+            int deleted = 0;
+            // New format: delete book folder contents
+            if (storage.listSubdirs(BOOKS).contains(bookId)) {
+                for (String sub : List.of("chapters", "characters", "places", "items")) {
+                    String subDir = bookPath(bookId) + "/" + sub;
+                    for (String fileName : storage.list(subDir)) {
+                        storage.delete(subDir, fileName);
+                        deleted++;
+                    }
+                }
+                storage.delete(bookPath(bookId), "meta.txt");
+                deleted++;
             }
-
-            return String.format("Book '%s' deleted (%d files).", bookName, fileNames.size());
+            // Old format: delete flat files
+            String prefix = bookId + "_";
+            for (String fileName : storage.list(BOOKS)) {
+                if (fileName.startsWith(prefix)) {
+                    storage.delete(BOOKS, fileName);
+                    deleted++;
+                }
+            }
+            return String.format("Book '%s' deleted (%d files).", bookName, deleted);
         } catch (IOException e) {
             return "Error deleting book: " + e.getMessage();
         }
@@ -391,8 +444,8 @@ public class NovelOracle {
                 return "Error: Book not found.";
             }
 
-            String fileName = bookId + "_" + chapterIndex + ".md";
-            storage.delete(BOOKS, fileName);
+            storage.delete(chaptersPath(bookId), chapterIndex + ".md");
+            storage.delete(BOOKS, bookId + "_" + chapterIndex + ".md"); // old format if exists
             return String.format("Chapter %d deleted.", chapterIndex);
         } catch (IOException e) {
             return "Error deleting chapter: " + e.getMessage();
@@ -410,11 +463,22 @@ public class NovelOracle {
 
     private String resolveBookId(String bookName) throws IOException {
         String sanitized = sanitizeFilename(bookName);
+        if (storage.exists(bookPath(sanitized), "meta.txt")) {
+            return sanitized;
+        }
         if (storage.exists(BOOKS, sanitized + "_meta.txt")) {
             return sanitized;
         }
-        List<String> fileNames = storage.list(BOOKS);
-        for (String name : fileNames) {
+        for (String bookId : storage.listSubdirs(BOOKS)) {
+            String meta = storage.read(bookPath(bookId), "meta.txt");
+            if (meta != null) {
+                String title = extractValue(meta, "TITLE:");
+                if (title.equalsIgnoreCase(bookName.trim()) || sanitizeFilename(title).equals(sanitized)) {
+                    return bookId;
+                }
+            }
+        }
+        for (String name : storage.list(BOOKS)) {
             if (name.endsWith("_meta.txt")) {
                 String meta = storage.read(BOOKS, name);
                 if (meta != null) {

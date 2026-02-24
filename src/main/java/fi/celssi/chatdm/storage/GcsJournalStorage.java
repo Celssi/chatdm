@@ -11,7 +11,10 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.StreamSupport;
 
 @Component
@@ -74,13 +77,30 @@ public class GcsJournalStorage implements JournalStorage {
     public List<String> list(String subDir) throws IOException {
         String prefix = basePrefix + subDir + "/";
         Iterable<Blob> blobs = storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll();
-        return StreamSupport.stream(blobs.spliterator(), false)
-                .map(b -> {
-                    String name = b.getName();
-                    return name.substring(name.lastIndexOf('/') + 1);
-                })
-                .filter(n -> !n.isEmpty())
-                .toList();
+        List<String> result = new ArrayList<>();
+        for (Blob b : blobs) {
+            String name = b.getName();
+            String relative = name.substring(prefix.length());
+            if (relative.contains("/")) continue; // skip objects in subfolders
+            if (!relative.isEmpty()) result.add(relative);
+        }
+        return result;
+    }
+
+    @Override
+    public List<String> listSubdirs(String subDir) throws IOException {
+        String prefix = basePrefix + subDir + "/";
+        Iterable<Blob> blobs = storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll();
+        Set<String> subdirs = new HashSet<>();
+        for (Blob b : blobs) {
+            String name = b.getName();
+            String relative = name.substring(prefix.length());
+            if (relative.contains("/")) {
+                String firstSegment = relative.substring(0, relative.indexOf('/'));
+                subdirs.add(firstSegment);
+            }
+        }
+        return subdirs.stream().sorted().toList();
     }
 
     @Override
