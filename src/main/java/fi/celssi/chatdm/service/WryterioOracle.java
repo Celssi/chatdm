@@ -178,12 +178,15 @@ public class WryterioOracle {
 
     @Tool(name = "ChatDM_update_wryterio_chapter", description = """
             Update a chapter in Wryterio. Content as markdown.
+            IMPORTANT: Only pass content when you intend to REPLACE the full chapter text.
+            When updating only title, description, or targetWordCount, OMIT content entirely
+            or pass null - otherwise existing chapter text may be accidentally cleared.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
             - chapterIndex: Required. 1-based chapter number
             - title: Optional. New chapter title
-            - content: Optional. New chapter content (markdown)
+            - content: Optional. New chapter content (markdown). Omit when updating only metadata.
             - description: Optional. Chapter description
             - targetWordCount: Optional. Target word count (e.g. "3000")
             """)
@@ -201,7 +204,7 @@ public class WryterioOracle {
             StringBuilder body = new StringBuilder("{");
             boolean first = true;
             if (title != null && !title.isBlank()) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
-            if (content != null) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); first = false; }
+            if (content != null && !content.isBlank()) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); first = false; }
             if (description != null) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
             if (targetWordCount != null) { if (!first) body.append(","); body.append("\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\""); }
             body.append("}");
