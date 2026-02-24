@@ -41,11 +41,21 @@ Add to `.cursor/mcp.json` (project) or `~/.cursor/mcp.json` (global):
 }
 ```
 
-## Claude Code Configuration
+## Claude Desktop Configuration
 
-```bash
-claude mcp add --transport http chatdm https://chatdm-334017779319.europe-north1.run.app/mcp
+Claude's Connectors UI only supports OAuth or authless servers. To use Wryterio tools, pass the token in the URL:
+
+**Add via Settings > Connectors** using this URL (replace with your token):
 ```
+https://chatdm-334017779319.europe-north1.run.app/mcp?wryterio_token=wrt_your_token_here
+```
+
+Or via CLI:
+```bash
+claude mcp add --transport http chatdm "https://chatdm-334017779319.europe-north1.run.app/mcp?wryterio_token=wrt_your_token_here"
+```
+
+> **Note:** Token in URL is less secure (may appear in logs). Prefer header auth when your client supports it (e.g. Cursor).
 
 ## Troubleshooting "handles auth correctly" Error
 
@@ -60,8 +70,9 @@ The server allows unauthenticated access - no API key or auth headers needed.
 
 ## Novel Writing & Wryterio Integration
 
-For novel-writing tools that fetch from [Wryterio](https://wryterio.com/), add your API token via headers:
+For novel-writing tools that fetch from [Wryterio](https://wryterio.com/), add your API token:
 
+**Option A: Header** (Cursor, clients that support custom headers):
 ```json
 {
   "mcpServers": {
@@ -74,6 +85,11 @@ For novel-writing tools that fetch from [Wryterio](https://wryterio.com/), add y
     }
   }
 }
+```
+
+**Option B: Query parameter** (Claude Desktop Connectors, authless clients):
+```
+https://chatdm-334017779319.europe-north1.run.app/mcp?wryterio_token=wrt_your_token_here
 ```
 
 Generate the token in your Wryterio profile (Profile → API Token → Generate). The token is sent with each request; Wryterio tools use it when `wryterioToken` is not passed explicitly.

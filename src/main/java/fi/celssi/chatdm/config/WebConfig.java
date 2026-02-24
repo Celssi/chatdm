@@ -41,6 +41,9 @@ public class WebConfig {
                 try {
                     if (request instanceof HttpServletRequest http) {
                         String token = http.getHeader("X-Wryterio-Token");
+                        if (token == null || token.isBlank()) {
+                            token = http.getParameter("wryterio_token");
+                        }
                         if (token != null && !token.isBlank()) {
                             WryterioTokenHolder.set(token.trim());
                         }
