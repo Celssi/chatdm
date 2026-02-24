@@ -19,6 +19,8 @@ description: Manages novels in ChatDM - sync books to cloud, character/place/ite
 
 1. **From markdown**: Use `ChatDM_sync_book` with `bookMarkdown` and optional `bookTitle`
 2. **From Wryterio**: Use `ChatDM_list_wryterio_books` to discover books, then **`ChatDM_sync_wryterio_book_to_cloud`** with `bookId`. This saves chapters to storage. Do NOT use `ChatDM_fetch_wryterio_book` when user wants to load/lataa a book—fetch only returns content, it does not save.
+3. **List chapters** (before sync or single chapter): `ChatDM_list_wryterio_chapters` — returns index and title for each chapter.
+4. **Single chapter from Wryterio**: `ChatDM_fetch_wryterio_chapter` — fetches one chapter by index (1-based). Use when book is too large or user wants only one chapter.
 
 ### Managing Bios
 

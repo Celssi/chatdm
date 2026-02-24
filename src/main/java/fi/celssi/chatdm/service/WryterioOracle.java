@@ -161,6 +161,91 @@ public class WryterioOracle {
         }
     }
 
+    @Tool(name = "ChatDM_list_wryterio_chapters", description = """
+            List chapters of a Wryterio book with index and title. Use before fetching a single chapter.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            """)
+    public String listWryterioChapters(String wryterioToken, String bookId) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) {
+            return "Error: Wryterio token required.";
+        }
+        if (bookId == null || bookId.isBlank()) {
+            return "Error: bookId is required.";
+        }
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) {
+            return "Error: Wryterio API not configured.";
+        }
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+
+            List<Map<String, Object>> chapters = objectMapper.readValue(response.getBody(),
+                    new TypeReference<>() {});
+            if (chapters == null || chapters.isEmpty()) {
+                return "No chapters found for this book.";
+            }
+
+            StringBuilder sb = new StringBuilder("Wryterio chapters:\n");
+            for (Map<String, Object> c : chapters) {
+                int index = ((Number) c.getOrDefault("index", 0)).intValue();
+                String title = String.valueOf(c.getOrDefault("title", ""));
+                sb.append("  ").append(index).append(". ").append(title).append("\n");
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "Error listing chapters: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_fetch_wryterio_chapter", description = """
+            Fetch a single chapter from Wryterio by 1-based index. Use ChatDM_list_wryterio_chapters first to get indices.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - chapterIndex: Required. 1-based chapter number
+            """)
+    public String fetchWryterioChapter(String wryterioToken, String bookId, int chapterIndex) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) {
+            return "Error: Wryterio token required.";
+        }
+        if (bookId == null || bookId.isBlank()) {
+            return "Error: bookId is required.";
+        }
+        if (chapterIndex < 1) {
+            return "Error: chapterIndex must be >= 1.";
+        }
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) {
+            return "Error: Wryterio API not configured.";
+        }
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters/" + chapterIndex;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            return response.getBody() != null ? response.getBody() : "";
+        } catch (Exception e) {
+            return "Error fetching chapter: " + e.getMessage();
+        }
+    }
+
     @Tool(name = "ChatDM_sync_wryterio_book_to_cloud", description = """
             Fetch book from Wryterio and SAVE all chapters to cloud storage. Use this when user wants to load/lataa a book for later use (reading chapters, bios, prompts). Splits markdown into numbered chapter files.
             Parameters:
