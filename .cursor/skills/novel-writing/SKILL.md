@@ -30,6 +30,8 @@ description: Manages novels in ChatDM - sync books to cloud, character/place/ite
 - **Read chapter metadata**: `ChatDM_get_wryterio_chapter` — returns title, description, targetWordCount
 - **Story elements**: `ChatDM_list_wryterio_story_elements`, `ChatDM_add_wryterio_story_element`, `ChatDM_update_wryterio_story_element`, `ChatDM_delete_wryterio_story_element`
 - **Plot timeline (Juonen aikajana)**: `ChatDM_get_wryterio_plot_timeline`, `ChatDM_update_wryterio_plot_timeline` — Save the Cat structure
+- **Book plan (outline)**: `ChatDM_get_wryterio_book_plan`, `ChatDM_update_wryterio_book_plan` — full book plan document (logline, characters, Save the Cat, chapter outlines)
+- **Book cover**: `ChatDM_get_wryterio_book_cover` — returns cover image URL
 
 ### Managing Bios
 

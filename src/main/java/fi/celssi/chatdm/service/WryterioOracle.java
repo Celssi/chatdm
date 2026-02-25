@@ -491,6 +491,100 @@ public class WryterioOracle {
         }
     }
 
+    @Tool(name = "ChatDM_get_wryterio_book_plan", description = """
+            Read the book plan (outline document) for a Wryterio book.
+            The book plan is a markdown document with logline, characters, Save the Cat structure, chapter outlines, etc.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            """)
+    public String getWryterioBookPlan(String wryterioToken, String bookId) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> book = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            Object planObj = book.get("bookPlan");
+            if (planObj == null || (planObj instanceof String && ((String) planObj).isBlank())) {
+                return "No book plan set for this book.";
+            }
+            return (String) planObj;
+        } catch (Exception e) {
+            return "Error getting book plan: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_update_wryterio_book_plan", description = """
+            Update the book plan (outline document) for a Wryterio book.
+            Pass the full plan content as markdown. Can include logline, characters, Save the Cat structure, chapter outlines, etc.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            - bookPlan: Required. The full book plan content (markdown)
+            """)
+    public String updateWryterioBookPlan(String wryterioToken, String bookId, String bookPlan) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (bookPlan == null) return "Error: bookPlan is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String body = "{\"bookPlan\":\"" + escapeJson(bookPlan) + "\"}";
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            return "Book plan updated.";
+        } catch (Exception e) {
+            return "Error updating book plan: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_get_wryterio_book_cover", description = """
+            Get the book cover image URL for a Wryterio book.
+            Parameters:
+            - wryterioToken: Optional. API token
+            - bookId: Required. Wryterio book ID
+            """)
+    public String getWryterioBookCover(String wryterioToken, String bookId) {
+        String token = resolveToken(wryterioToken);
+        if (token == null) return "Error: Wryterio token required.";
+        if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
+        if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
+
+        try {
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, new HttpEntity<>(headers), String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                return "Error: Wryterio API returned " + response.getStatusCode();
+            }
+            Map<String, Object> book = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
+            Object coverObj = book.get("coverImageUrl");
+            if (coverObj == null || (coverObj instanceof String && ((String) coverObj).isBlank())) {
+                return "No cover image set for this book.";
+            }
+            return (String) coverObj;
+        } catch (Exception e) {
+            return "Error getting book cover: " + e.getMessage();
+        }
+    }
+
     private String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
