@@ -810,7 +810,8 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_sync_wryterio_book_to_cloud", description = """
-            Fetch book from Wryterio and SAVE all chapters to cloud storage. Use this when user wants to load/lataa a book for later use (reading chapters, bios, prompts). Splits markdown into numbered chapter files.
+            Fetch book from Wryterio and SAVE all data to cloud storage: chapters, metadata (description, target word count, book plan), story elements (characters, places, items).
+            Use when user wants to load/lataa a book for later use. The export includes full metadata in meta.txt.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -820,7 +821,40 @@ public class WryterioOracle {
         if (markdown.startsWith("Error:")) {
             return markdown;
         }
-        return novelOracle.syncBook(markdown, null);
+        String bookResult = novelOracle.syncBook(markdown, null);
+        if (bookResult.startsWith("Error:")) {
+            return bookResult;
+        }
+        String bookTitle = extractTitleFromMarkdown(markdown);
+        String elementsResult = syncWryterioCharactersToCloud(wryterioToken, bookId, bookTitle);
+        if (elementsResult.startsWith("Error:")) {
+            return bookResult + " Story elements: " + elementsResult;
+        }
+        int elementsCount = 0;
+        try {
+            int idx = elementsResult.indexOf("Synced ");
+            if (idx >= 0) {
+                int end = elementsResult.indexOf(" story", idx);
+                if (end > idx) {
+                    elementsCount = Integer.parseInt(elementsResult.substring(idx + 7, end).trim());
+                }
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        if (elementsCount > 0) {
+            return bookResult + " " + elementsCount + " story elements synced.";
+        }
+        return bookResult;
+    }
+
+    private String extractTitleFromMarkdown(String markdown) {
+        if (markdown == null) return null;
+        int start = markdown.indexOf("# ");
+        if (start == -1) return null;
+        start += 2;
+        int end = markdown.indexOf("\n", start);
+        if (end == -1) end = markdown.length();
+        return markdown.substring(start, end).trim();
     }
 
     @Tool(name = "ChatDM_fetch_wryterio_characters", description = """
@@ -875,7 +909,7 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_sync_wryterio_characters_to_cloud", description = """
-            Fetch characters from Wryterio and save as bios under the book in cloud storage.
+            Fetch story elements (characters, places, items) from Wryterio and save as bios under the book in cloud storage.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -895,7 +929,7 @@ public class WryterioOracle {
         }
 
         try {
-            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/characters";
+            String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements";
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
             ResponseEntity<String> response = restTemplate.exchange(
@@ -905,25 +939,29 @@ public class WryterioOracle {
                 return "Error: Wryterio API returned " + response.getStatusCode();
             }
 
-            List<Map<String, Object>> chars = objectMapper.readValue(response.getBody(),
+            List<Map<String, Object>> elements = objectMapper.readValue(response.getBody(),
                     new TypeReference<>() {});
-            if (chars == null || chars.isEmpty()) {
-                return "No characters to sync.";
+            if (elements == null || elements.isEmpty()) {
+                return "No story elements to sync.";
             }
 
             String targetBook = bookName != null && !bookName.isBlank() ? bookName.trim() : bookId;
             int count = 0;
-            for (Map<String, Object> c : chars) {
-                String name = String.valueOf(c.getOrDefault("name", ""));
-                String bio = String.valueOf(c.getOrDefault("bio", ""));
+            for (Map<String, Object> el : elements) {
+                String name = String.valueOf(el.getOrDefault("name", ""));
+                String bio = String.valueOf(el.getOrDefault("bio", el.getOrDefault("description", "")));
+                String type = String.valueOf(el.getOrDefault("type", "character")).toLowerCase();
+                if (!"character".equals(type) && !"place".equals(type) && !"item".equals(type)) {
+                    type = "character";
+                }
                 if (!name.isEmpty() && !"null".equals(name)) {
-                    novelOracle.saveBookBio(targetBook, "character", name, bio != null ? bio : "");
+                    novelOracle.saveBookBio(targetBook, type, name, bio != null && !"null".equals(bio) ? bio : "");
                     count++;
                 }
             }
-            return String.format("Synced %d characters to cloud for book '%s'.", count, targetBook);
+            return String.format("Synced %d story elements (characters, places, items) to cloud for book '%s'.", count, targetBook);
         } catch (Exception e) {
-            return "Error syncing characters: " + e.getMessage();
+            return "Error syncing story elements: " + e.getMessage();
         }
     }
 
