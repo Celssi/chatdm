@@ -26,7 +26,13 @@ description: Manages novels in ChatDM - sync books to cloud, character/place/ite
 
 - **Create book**: `ChatDM_create_wryterio_book` — title
 - **Get/update metadata**: `ChatDM_get_wryterio_book`, `ChatDM_update_wryterio_book` — title, author, description
-- **Add/update chapters**: `ChatDM_add_wryterio_chapter`, `ChatDM_update_wryterio_chapter` — content as markdown; supports title, description, targetWordCount. **CRITICAL**: When updating only metadata (title, description, targetWordCount), do NOT pass content—omit it entirely. Passing empty content will overwrite and clear the chapter text.
+- **Add/update chapters**: `ChatDM_add_wryterio_chapter`, `ChatDM_update_wryterio_chapter` — content as markdown; supports title, description, targetWordCount.
+
+### Data loss prevention
+
+- **Never** pass the `content` parameter when updating only metadata (title, description, targetWordCount). Omit it entirely.
+- **Never** pass `content: null`, `content: ""`, or `content: "null"` — these can overwrite and destroy chapter text.
+- Use `ChatDM_get_wryterio_chapter` before updating if you are unsure about parameters.
 - **Read chapter metadata**: `ChatDM_get_wryterio_chapter` — returns title, description, targetWordCount
 - **Story elements**: `ChatDM_list_wryterio_story_elements`, `ChatDM_add_wryterio_story_element`, `ChatDM_update_wryterio_story_element`, `ChatDM_delete_wryterio_story_element`. `ChatDM_sync_wryterio_characters_to_cloud` syncs all types (characters, places, items) to cloud.
 - **Plot timeline (Juonen aikajana)**: `ChatDM_get_wryterio_plot_timeline`, `ChatDM_update_wryterio_plot_timeline` — Save the Cat structure

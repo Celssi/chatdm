@@ -178,9 +178,9 @@ public class WryterioOracle {
 
     @Tool(name = "ChatDM_update_wryterio_chapter", description = """
             Update a chapter in Wryterio. Content as markdown.
-            IMPORTANT: Only pass content when you intend to REPLACE the full chapter text.
-            When updating only title, description, or targetWordCount, OMIT content entirely
-            or pass null - otherwise existing chapter text may be accidentally cleared.
+            DANGER: Passing content='null' or empty string will OVERWRITE and DESTROY the chapter text.
+            Omit content parameter when updating only metadata (title, description, targetWordCount).
+            content is required only when you intend to REPLACE the full chapter text.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -203,11 +203,14 @@ public class WryterioOracle {
         try {
             StringBuilder body = new StringBuilder("{");
             boolean first = true;
-            if (title != null && !title.isBlank()) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
-            if (content != null && !content.isBlank()) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); first = false; }
-            if (description != null) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
-            if (targetWordCount != null) { if (!first) body.append(","); body.append("\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\""); }
+            if (isMeaningfulContent(title)) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
+            if (isMeaningfulContent(content)) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); first = false; }
+            if (isMeaningfulContent(description)) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
+            if (isMeaningfulContent(targetWordCount)) { if (!first) body.append(","); body.append("\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\""); }
             body.append("}");
+            if (body.toString().equals("{}")) {
+                return "Error: No valid updates. Rejecting placeholder values (e.g. \"null\"). Pass real content or omit content when updating only metadata.";
+            }
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters/" + chapterIndex;
             HttpHeaders headers = new HttpHeaders();
@@ -237,18 +240,19 @@ public class WryterioOracle {
         String token = resolveToken(wryterioToken);
         if (token == null) return "Error: Wryterio token required.";
         if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
-        if (title == null || title.isBlank()) return "Error: title is required.";
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
-
+        if (!isMeaningfulContent(title)) {
+            return "Error: title is required and must not be a placeholder (e.g. \"null\").";
+        }
         try {
             StringBuilder body = new StringBuilder("{\"title\":\"" + escapeJson(title.trim()) + "\"");
-            if (content != null && !content.isBlank()) {
+            if (isMeaningfulContent(content)) {
                 body.append(",\"content\":\"").append(escapeJson(content)).append("\"");
             }
-            if (description != null && !description.isBlank()) {
+            if (isMeaningfulContent(description)) {
                 body.append(",\"description\":\"").append(escapeJson(description)).append("\"");
             }
-            if (targetWordCount != null && !targetWordCount.isBlank()) {
+            if (isMeaningfulContent(targetWordCount)) {
                 body.append(",\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\"");
             }
             body.append("}");
@@ -367,10 +371,13 @@ public class WryterioOracle {
         try {
             StringBuilder body = new StringBuilder("{");
             boolean first = true;
-            if (name != null && !name.isBlank()) { body.append("\"name\":\"").append(escapeJson(name)).append("\""); first = false; }
-            if (description != null) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
+            if (isMeaningfulContent(name)) { body.append("\"name\":\"").append(escapeJson(name)).append("\""); first = false; }
+            if (isMeaningfulContent(description)) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
             if (type != null && !type.isBlank()) { if (!first) body.append(","); body.append("\"type\":\"").append(type.toLowerCase()).append("\""); }
             body.append("}");
+            if (body.toString().equals("{}")) {
+                return "Error: No valid updates. Rejecting placeholder values (e.g. \"null\"). Pass real content or omit fields.";
+            }
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements/" + elementId;
             HttpHeaders headers = new HttpHeaders();
@@ -536,6 +543,7 @@ public class WryterioOracle {
         if (token == null) return "Error: Wryterio token required.";
         if (bookId == null || bookId.isBlank()) return "Error: bookId is required.";
         if (bookPlan == null) return "Error: bookPlan is required.";
+        if (!isMeaningfulContent(bookPlan)) return "Error: bookPlan must not be a placeholder (e.g. \"null\").";
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
 
         try {
@@ -588,6 +596,16 @@ public class WryterioOracle {
     private String escapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+    }
+
+    /** Rejects placeholder/null values that would overwrite real content with garbage. */
+    private static boolean isMeaningfulContent(String s) {
+        if (s == null || s.isBlank()) return false;
+        String t = s.trim();
+        if (t.length() < 2) return false;
+        String lower = t.toLowerCase();
+        if ("null".equals(lower) || "undefined".equals(lower)) return false;
+        return true;
     }
 
     @Tool(name = "ChatDM_search_wryterio_books", description = """
