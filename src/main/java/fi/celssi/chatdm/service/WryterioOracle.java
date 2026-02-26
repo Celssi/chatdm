@@ -451,10 +451,11 @@ public class WryterioOracle {
                 if ("null".equals(description)) description = "";
                 int pctStart = ((Number) p.getOrDefault("percentageStart", 0)).intValue();
                 int pctEnd = ((Number) p.getOrDefault("percentageEnd", 0)).intValue();
-                int act = ((Number) p.getOrDefault("act", 1)).intValue();
+                int act = ((Number) p.getOrDefault("act", 0)).intValue();
                 String notes = String.valueOf(p.getOrDefault("notes", ""));
                 if ("null".equals(notes)) notes = "";
-                sb.append("  - ").append(name).append(" (Act ").append(act).append(", ").append(pctStart).append("-").append(pctEnd).append("%)\n");
+                String actLabel = act == 0 ? "Custom" : "Act " + act;
+                sb.append("  - ").append(name).append(" (").append(actLabel).append(", ").append(pctStart).append("-").append(pctEnd).append("%)\n");
                 if (!description.isEmpty()) sb.append("    ").append(description.length() > 100 ? description.substring(0, 100) + "..." : description).append("\n");
                 if (!notes.isEmpty()) sb.append("    Notes: ").append(notes.length() > 80 ? notes.substring(0, 80) + "..." : notes).append("\n");
             }
@@ -467,7 +468,7 @@ public class WryterioOracle {
     @Tool(name = "ChatDM_update_wryterio_plot_timeline", description = """
             Replace the plot timeline (Juonen aikajana) for a Wryterio book. Uses Save the Cat structure.
             Pass plotTimeline as JSON array. Each point: { name, description?, percentageStart, percentageEnd, act, notes? }
-            act: 1 (Act 1), 2 (Act 2A), 3 (Act 2B), 4 (Act 3)
+            act: 0 (Custom), 1 (Act 1), 2 (Act 2A), 3 (Act 2B), 4 (Act 3)
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
