@@ -488,7 +488,8 @@ public class WryterioOracle {
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
 
         try {
-            String body = "{\"plotTimeline\":" + plotTimelineJson.trim() + "}";
+            Object parsed = objectMapper.readValue(plotTimelineJson.trim(), Object.class);
+            String body = objectMapper.writeValueAsString(java.util.Map.of("plotTimeline", parsed));
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/plot-timeline";
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
