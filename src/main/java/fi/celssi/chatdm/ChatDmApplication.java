@@ -7,8 +7,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
+
+import java.time.Duration;
 
 @SpringBootApplication
 public class ChatDmApplication {
@@ -17,9 +20,19 @@ public class ChatDmApplication {
         SpringApplication.run(ChatDmApplication.class, args);
     }
 
+    @Value("${chatdm.wryterio.connect-timeout:10}")
+    private int wryterioConnectTimeoutSeconds;
+
+    @Value("${chatdm.wryterio.read-timeout:120}")
+    private int wryterioReadTimeoutSeconds;
+
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate(new HttpComponentsClientHttpRequestFactory());
+        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(wryterioConnectTimeoutSeconds));
+        factory.setConnectionRequestTimeout(Duration.ofSeconds(wryterioConnectTimeoutSeconds));
+        factory.setReadTimeout(Duration.ofSeconds(wryterioReadTimeoutSeconds));
+        return new RestTemplate(factory);
     }
 
     @Configuration

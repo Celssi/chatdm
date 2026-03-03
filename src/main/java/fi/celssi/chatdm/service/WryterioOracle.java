@@ -11,8 +11,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -75,7 +78,7 @@ public class WryterioOracle {
             }
             return sb.toString();
         } catch (Exception e) {
-            return "Error fetching Wryterio books: " + e.getMessage();
+            return formatWryterioError("fetching Wryterio books", e);
         }
     }
 
@@ -104,7 +107,7 @@ public class WryterioOracle {
                     book.get("title"), book.get("id"), book.getOrDefault("author", ""), book.getOrDefault("description", ""),
                     ((Number) book.getOrDefault("chapterCount", 0)).intValue());
         } catch (Exception e) {
-            return "Error fetching book: " + e.getMessage();
+            return formatWryterioError("fetching book", e);
         }
     }
 
@@ -127,24 +130,23 @@ public class WryterioOracle {
         }
 
         try {
-            StringBuilder body = new StringBuilder("{");
-            boolean first = true;
-            if (title != null && !title.isBlank()) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
-            if (author != null) { if (!first) body.append(","); body.append("\"author\":").append(author.isBlank() ? "null" : "\"" + escapeJson(author) + "\""); first = false; }
-            if (description != null) { if (!first) body.append(","); body.append("\"description\":").append(description.isBlank() ? "null" : "\"" + escapeJson(description) + "\""); }
-            body.append("}");
+            Map<String, Object> updates = new HashMap<>();
+            if (title != null && !title.isBlank()) updates.put("title", title.trim());
+            if (author != null) updates.put("author", author.isBlank() ? null : author);
+            if (description != null) updates.put("description", description.isBlank() ? null : description);
+            String body = objectMapper.writeValueAsString(updates);
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId;
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body.toString(), headers), String.class);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PATCH, new HttpEntity<>(body, headers), String.class);
             if (!response.getStatusCode().is2xxSuccessful()) {
                 return "Error: Wryterio API returned " + response.getStatusCode();
             }
             return "Book metadata updated.";
         } catch (Exception e) {
-            return "Error updating book: " + e.getMessage();
+            return formatWryterioError("updating book", e);
         }
     }
 
@@ -161,7 +163,7 @@ public class WryterioOracle {
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
 
         try {
-            String body = "{\"title\":\"" + escapeJson(title.trim()) + "\"}";
+            String body = objectMapper.writeValueAsString(Map.of("title", title.trim()));
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books";
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
@@ -173,7 +175,7 @@ public class WryterioOracle {
             Map<String, Object> result = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
             return String.format("Book created: %s (id: %s)", result.get("title"), result.get("id"));
         } catch (Exception e) {
-            return "Error creating book: " + e.getMessage();
+            return formatWryterioError("creating book", e);
         }
     }
 
@@ -203,28 +205,27 @@ public class WryterioOracle {
         }
 
         try {
-            StringBuilder body = new StringBuilder("{");
-            boolean first = true;
-            if (isMeaningfulContent(title)) { body.append("\"title\":\"").append(escapeJson(title)).append("\""); first = false; }
-            if (isMeaningfulContent(content)) { if (!first) body.append(","); body.append("\"content\":\"").append(escapeJson(content)).append("\""); first = false; }
-            if (isMeaningfulContent(description)) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
-            if (isMeaningfulContent(targetWordCount)) { if (!first) body.append(","); body.append("\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\""); }
-            body.append("}");
-            if (body.toString().equals("{}")) {
+            Map<String, Object> updates = new LinkedHashMap<>();
+            if (isMeaningfulContent(title)) updates.put("title", title);
+            if (isMeaningfulContent(content)) updates.put("content", content);
+            if (isMeaningfulContent(description)) updates.put("description", description);
+            if (isMeaningfulContent(targetWordCount)) updates.put("targetWordCount", targetWordCount);
+            if (updates.isEmpty()) {
                 return "Error: No valid updates. Rejecting placeholder values (e.g. \"null\"). Pass real content or omit content when updating only metadata.";
             }
+            String body = objectMapper.writeValueAsString(updates);
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters/" + chapterIndex;
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body.toString(), headers), String.class);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body, headers), String.class);
             if (!response.getStatusCode().is2xxSuccessful()) {
                 return "Error: Wryterio API returned " + response.getStatusCode();
             }
             return "Chapter " + chapterIndex + " updated.";
         } catch (Exception e) {
-            return "Error updating chapter: " + e.getMessage();
+            return formatWryterioError("updating chapter", e);
         }
     }
 
@@ -247,30 +248,25 @@ public class WryterioOracle {
             return "Error: title is required and must not be a placeholder (e.g. \"null\").";
         }
         try {
-            StringBuilder body = new StringBuilder("{\"title\":\"" + escapeJson(title.trim()) + "\"");
-            if (isMeaningfulContent(content)) {
-                body.append(",\"content\":\"").append(escapeJson(content)).append("\"");
-            }
-            if (isMeaningfulContent(description)) {
-                body.append(",\"description\":\"").append(escapeJson(description)).append("\"");
-            }
-            if (isMeaningfulContent(targetWordCount)) {
-                body.append(",\"targetWordCount\":\"").append(escapeJson(targetWordCount)).append("\"");
-            }
-            body.append("}");
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("title", title.trim());
+            if (isMeaningfulContent(content)) payload.put("content", content);
+            if (isMeaningfulContent(description)) payload.put("description", description);
+            if (isMeaningfulContent(targetWordCount)) payload.put("targetWordCount", targetWordCount);
+            String body = objectMapper.writeValueAsString(payload);
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/chapters";
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body.toString(), headers), String.class);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), String.class);
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 return "Error: Wryterio API returned " + response.getStatusCode();
             }
             Map<String, Object> result = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
             return String.format("Chapter added: %s (index: %s)", result.get("title"), result.get("index"));
         } catch (Exception e) {
-            return "Error adding chapter: " + e.getMessage();
+            return formatWryterioError("adding chapter", e);
         }
     }
 
@@ -307,7 +303,7 @@ public class WryterioOracle {
             }
             return sb.toString();
         } catch (Exception e) {
-            return "Error listing story elements: " + e.getMessage();
+            return formatWryterioError("listing story elements", e);
         }
     }
 
@@ -331,7 +327,11 @@ public class WryterioOracle {
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
 
         try {
-            String body = "{\"name\":\"" + escapeJson(name.trim()) + "\",\"description\":\"" + escapeJson(description != null ? description : "") + "\",\"type\":\"" + type.toLowerCase() + "\"}";
+            String body = objectMapper.writeValueAsString(Map.of(
+                    "name", name.trim(),
+                    "description", description != null ? description : "",
+                    "type", type.toLowerCase()
+            ));
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements";
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
@@ -343,7 +343,7 @@ public class WryterioOracle {
             Map<String, Object> result = objectMapper.readValue(response.getBody(), new TypeReference<>() {});
             return String.format("Story element added: %s [%s] (id: %s)", result.get("name"), result.get("type"), result.get("id"));
         } catch (Exception e) {
-            return "Error adding story element: " + e.getMessage();
+            return formatWryterioError("adding story element", e);
         }
     }
 
@@ -371,27 +371,26 @@ public class WryterioOracle {
         }
 
         try {
-            StringBuilder body = new StringBuilder("{");
-            boolean first = true;
-            if (isMeaningfulContent(name)) { body.append("\"name\":\"").append(escapeJson(name)).append("\""); first = false; }
-            if (isMeaningfulContent(description)) { if (!first) body.append(","); body.append("\"description\":\"").append(escapeJson(description)).append("\""); first = false; }
-            if (type != null && !type.isBlank()) { if (!first) body.append(","); body.append("\"type\":\"").append(type.toLowerCase()).append("\""); }
-            body.append("}");
-            if (body.toString().equals("{}")) {
+            Map<String, Object> updates = new LinkedHashMap<>();
+            if (isMeaningfulContent(name)) updates.put("name", name);
+            if (isMeaningfulContent(description)) updates.put("description", description);
+            if (type != null && !type.isBlank()) updates.put("type", type.toLowerCase());
+            if (updates.isEmpty()) {
                 return "Error: No valid updates. Rejecting placeholder values (e.g. \"null\"). Pass real content or omit fields.";
             }
+            String body = objectMapper.writeValueAsString(updates);
 
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId + "/story-elements/" + elementId;
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body.toString(), headers), String.class);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(body, headers), String.class);
             if (!response.getStatusCode().is2xxSuccessful()) {
                 return "Error: Wryterio API returned " + response.getStatusCode();
             }
             return "Story element updated.";
         } catch (Exception e) {
-            return "Error updating story element: " + e.getMessage();
+            return formatWryterioError("updating story element", e);
         }
     }
 
@@ -419,7 +418,7 @@ public class WryterioOracle {
             }
             return "Story element deleted.";
         } catch (Exception e) {
-            return "Error deleting story element: " + e.getMessage();
+            return formatWryterioError("deleting story element", e);
         }
     }
 
@@ -469,7 +468,7 @@ public class WryterioOracle {
             }
             return sb.toString();
         } catch (Exception e) {
-            return "Error getting plot timeline: " + e.getMessage();
+            return formatWryterioError("getting plot timeline", e);
         }
     }
 
@@ -504,7 +503,7 @@ public class WryterioOracle {
             int count = ((Number) result.getOrDefault("count", 0)).intValue();
             return "Plot timeline updated. " + count + " point(s).";
         } catch (Exception e) {
-            return "Error updating plot timeline: " + e.getMessage();
+            return formatWryterioError("updating plot timeline", e);
         }
     }
 
@@ -536,7 +535,7 @@ public class WryterioOracle {
             }
             return (String) planObj;
         } catch (Exception e) {
-            return "Error getting book plan: " + e.getMessage();
+            return formatWryterioError("getting book plan", e);
         }
     }
 
@@ -557,7 +556,7 @@ public class WryterioOracle {
         if (wryterioApiUrl == null || wryterioApiUrl.isBlank()) return "Error: Wryterio API not configured.";
 
         try {
-            String body = "{\"bookPlan\":\"" + escapeJson(bookPlan) + "\"}";
+            String body = objectMapper.writeValueAsString(Map.of("bookPlan", bookPlan));
             String url = wryterioApiUrl.replaceAll("/$", "") + "/api/books/" + bookId;
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
@@ -568,7 +567,7 @@ public class WryterioOracle {
             }
             return "Book plan updated.";
         } catch (Exception e) {
-            return "Error updating book plan: " + e.getMessage();
+            return formatWryterioError("updating book plan", e);
         }
     }
 
@@ -599,13 +598,8 @@ public class WryterioOracle {
             }
             return (String) coverObj;
         } catch (Exception e) {
-            return "Error getting book cover: " + e.getMessage();
+            return formatWryterioError("getting book cover", e);
         }
-    }
-
-    private String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 
     /** Rejects placeholder/null values that would overwrite real content with garbage. */
@@ -616,6 +610,27 @@ public class WryterioOracle {
         String lower = t.toLowerCase();
         if ("null".equals(lower) || "undefined".equals(lower)) return false;
         return true;
+    }
+
+    /** Extracts human-readable error from Wryterio API response body { "error": "..." }. */
+    private String parseErrorFromBody(String body) {
+        if (body == null || body.isBlank()) return null;
+        try {
+            Map<String, Object> map = objectMapper.readValue(body, new TypeReference<>() {});
+            Object err = map.get("error");
+            return err != null ? String.valueOf(err).trim() : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /** Formats API/network errors with API error message when available. */
+    private String formatWryterioError(String context, Exception e) {
+        if (e instanceof RestClientResponseException ex) {
+            String apiError = parseErrorFromBody(ex.getResponseBodyAsString());
+            return "Error " + context + ": " + (apiError != null && !apiError.isBlank() ? apiError : ex.getStatusText());
+        }
+        return "Error " + context + ": " + e.getMessage();
     }
 
     @Tool(name = "ChatDM_search_wryterio_books", description = """
@@ -662,7 +677,7 @@ public class WryterioOracle {
             }
             return sb.toString();
         } catch (Exception e) {
-            return "Error searching Wryterio books: " + e.getMessage();
+            return formatWryterioError("searching Wryterio books", e);
         }
     }
 
@@ -698,7 +713,7 @@ public class WryterioOracle {
             }
             return response.getBody() != null ? response.getBody() : "";
         } catch (Exception e) {
-            return "Error fetching book: " + e.getMessage();
+            return formatWryterioError("fetching book", e);
         }
     }
 
@@ -750,7 +765,7 @@ public class WryterioOracle {
             }
             return sb.toString();
         } catch (Exception e) {
-            return "Error listing chapters: " + e.getMessage();
+            return formatWryterioError("listing chapters", e);
         }
     }
 
@@ -790,7 +805,7 @@ public class WryterioOracle {
             }
             return response.getBody() != null ? response.getBody() : "";
         } catch (Exception e) {
-            return "Error fetching chapter: " + e.getMessage();
+            return formatWryterioError("fetching chapter", e);
         }
     }
 
@@ -837,7 +852,7 @@ public class WryterioOracle {
             sb.append("Content length: ").append(contentLen).append(" chars");
             return sb.toString();
         } catch (Exception e) {
-            return "Error getting chapter: " + e.getMessage();
+            return formatWryterioError("getting chapter", e);
         }
     }
 
@@ -936,7 +951,7 @@ public class WryterioOracle {
             }
             return sb.toString();
         } catch (Exception e) {
-            return "Error fetching characters: " + e.getMessage();
+            return formatWryterioError("fetching characters", e);
         }
     }
 
@@ -994,7 +1009,7 @@ public class WryterioOracle {
             }
             return String.format("Synced %d story elements (characters, places, items) to cloud for book '%s'.", count, targetBook);
         } catch (Exception e) {
-            return "Error syncing story elements: " + e.getMessage();
+            return formatWryterioError("syncing story elements", e);
         }
     }
 
