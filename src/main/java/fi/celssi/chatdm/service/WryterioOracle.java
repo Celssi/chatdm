@@ -35,6 +35,7 @@ public class WryterioOracle {
 
     @Tool(name = "ChatDM_list_wryterio_books", description = """
             Fetch all books available from Wryterio. Returns list with id and name.
+            WHEN TO USE: First step to discover books before syncing or fetching. Use bookId with ChatDM_sync_wryterio_book_to_cloud when user wants to load/save.
             Token: pass wryterioToken param, or set X-Wryterio-Token in MCP config headers.
             Parameters:
             - wryterioToken: Optional. API token; uses header value if omitted
@@ -181,6 +182,7 @@ public class WryterioOracle {
             DANGER: Passing content='null' or empty string will OVERWRITE and DESTROY the chapter text.
             Omit content parameter when updating only metadata (title, description, targetWordCount).
             content is required only when you intend to REPLACE the full chapter text.
+            RELATED: ChatDM_get_wryterio_chapter to read current metadata before updating.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -666,7 +668,7 @@ public class WryterioOracle {
 
     @Tool(name = "ChatDM_fetch_wryterio_book", description = """
             Fetch full book markdown from Wryterio. Returns raw markdown only—does NOT save to storage.
-            To load/save a book for later use, use ChatDM_sync_wryterio_book_to_cloud instead.
+            WHEN TO USE: When you need the content in-memory only (e.g. to display or process). Do NOT use for "load book" or "sync"—use ChatDM_sync_wryterio_book_to_cloud instead.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -701,7 +703,8 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_list_wryterio_chapters", description = """
-            List chapters of a Wryterio book with index and title. Use before fetching a single chapter.
+            List chapters of a Wryterio book with index and title.
+            WHEN TO USE: Before ChatDM_fetch_wryterio_chapter to get chapter indices (1-based). Use ChatDM_fetch_wryterio_chapter for content; ChatDM_get_wryterio_chapter for metadata only.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -752,8 +755,9 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_fetch_wryterio_chapter", description = """
-            Fetch a single chapter from Wryterio by 1-based index. Returns markdown content only.
-            Use ChatDM_get_wryterio_chapter to read title, description, targetWordCount.
+            Fetch a single chapter from Wryterio by 1-based index. Returns markdown CONTENT only (chapter text).
+            CONTRAST: ChatDM_get_wryterio_chapter returns METADATA (title, description, targetWordCount), not full content.
+            RELATED: ChatDM_list_wryterio_chapters first to get chapter indices.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -791,7 +795,9 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_get_wryterio_chapter", description = """
-            Read chapter metadata (title, description, targetWordCount) and optionally content from Wryterio.
+            Read chapter METADATA (title, description, targetWordCount, content length) from Wryterio. Does NOT return full chapter text.
+            CONTRAST: ChatDM_fetch_wryterio_chapter returns the full chapter CONTENT (markdown).
+            RELATED: Use before ChatDM_update_wryterio_chapter when unsure what to pass; omit content when updating metadata only.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -836,11 +842,11 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_sync_wryterio_book_to_cloud", description = """
-            Fetch book from Wryterio and SAVE all data to cloud storage: chapters, metadata (description, target word count, book plan), story elements (characters, places, items).
-            Use when user wants to load/lataa a book for later use. The export includes full metadata in meta.txt.
+            Fetch book from Wryterio and SAVE all data to cloud storage: chapters, metadata, story elements (characters, places, items).
+            WHEN TO USE: User says "load book", "sync from Wryterio", "lataa kirja", or wants to save a Wryterio book for later. Do NOT use ChatDM_fetch_wryterio_book for loading—it only returns content, does not save.
             Parameters:
             - wryterioToken: Optional. API token
-            - bookId: Required. Wryterio book ID
+            - bookId: Required. Wryterio book ID (from ChatDM_list_wryterio_books)
             """)
     public String syncWryterioBookToCloud(String wryterioToken, String bookId) {
         String markdown = fetchWryterioBook(wryterioToken, bookId);
@@ -936,6 +942,7 @@ public class WryterioOracle {
 
     @Tool(name = "ChatDM_sync_wryterio_characters_to_cloud", description = """
             Fetch story elements (characters, places, items) from Wryterio and save as bios under the book in cloud storage.
+            WHEN TO USE: To sync Wryterio story elements to cloud for use with ChatDM_load_book_bio and novel_character_dialogue_prompt. ChatDM_sync_wryterio_book_to_cloud calls this automatically.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID

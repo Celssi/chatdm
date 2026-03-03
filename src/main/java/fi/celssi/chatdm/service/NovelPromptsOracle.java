@@ -8,9 +8,10 @@ public class NovelPromptsOracle {
 
     @Tool(name = "novel_what_happens_next_prompt", description = """
             Get a prompt for suggesting what could happen in the next three paragraphs.
-            Use after loading chapter/context with ChatDM_load_book_chapter.
+            WORKFLOW: Call ChatDM_load_book_chapter first; pass the loaded content (or last paragraphs) as recentText.
+            Returns a prompt string—pass it to the LLM to generate suggestions.
             Parameters:
-            - recentText: Optional. The last few paragraphs or scene context to build on
+            - recentText: Optional. The last few paragraphs or scene context to build on (from ChatDM_load_book_chapter)
             - bookName: Optional. Book title for context
             - chapterIndex: Optional. Current chapter number
             """)
@@ -35,10 +36,11 @@ public class NovelPromptsOracle {
 
     @Tool(name = "novel_character_dialogue_prompt", description = """
             Get a prompt for suggesting what a character might say next.
-            Use after loading character bio with ChatDM_load_book_bio and chapter context.
+            WORKFLOW: Load character bio with ChatDM_load_book_bio first if available; pass as characterBio.
+            Returns a prompt string—pass it to the LLM to generate dialogue suggestions.
             Parameters:
             - characterName: Required. The character who might speak
-            - sceneContext: Optional. Current scene, recent dialogue, or situation
+            - sceneContext: Optional. Current scene, recent dialogue, or situation (e.g. from ChatDM_load_book_chapter)
             - characterBio: Optional. Character bio (load with ChatDM_load_book_bio if available)
             """)
     public String getCharacterDialoguePrompt(String characterName, String sceneContext, String characterBio) {

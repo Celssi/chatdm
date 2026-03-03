@@ -34,7 +34,9 @@ public class NovelOracle {
     @Tool(name = "ChatDM_sync_book", description = """
             Sync a book from markdown to cloud storage. If the book exists, updates all chapters.
             If new, creates a folder and splits into numbered chapter files (1.md, 2.md, ...).
-            Chapter titles may change; files are numbered for stability.
+            WHEN TO USE: User provides full book markdown; first step to save a book.
+            Format: Use H2 (## ) headings to split chapters. Title from first # line if omitted.
+            RELATED: ChatDM_list_books to see saved books; ChatDM_load_book_chapter to read.
             Parameters:
             - bookMarkdown: Required. Full book markdown with H2 (## ) chapter headings
             - bookTitle: Optional. Display title; if omitted, extracted from first # line
@@ -105,8 +107,9 @@ public class NovelOracle {
     }
 
     @Tool(name = "ChatDM_list_books", description = """
-            List all books in cloud storage.
-            Returns book titles and IDs.
+            List all books in cloud storage. Returns book titles and IDs.
+            WHEN TO USE: First step before loading a chapter or bio; discover available books.
+            RELATED: ChatDM_load_book_chapter, ChatDM_list_book_bios, ChatDM_load_book_meta.
             """)
     public String listBooks() {
         try {
@@ -141,9 +144,11 @@ public class NovelOracle {
     }
 
     @Tool(name = "ChatDM_load_book_chapter", description = """
-            Load a single chapter by book and index.
+            Load a single chapter by book and index. Returns chapter markdown.
+            WHEN TO USE: Required before novel_what_happens_next_prompt—pass loaded content as recentText.
+            RELATED: ChatDM_list_books first; novel_what_happens_next_prompt for "what happens next" suggestions.
             Parameters:
-            - bookName: Required. Book title or ID
+            - bookName: Required. Book title or ID (from ChatDM_list_books)
             - chapterIndex: Required. 1-based chapter number
             """)
     public String loadBookChapter(String bookName, int chapterIndex) {
@@ -170,6 +175,8 @@ public class NovelOracle {
 
     @Tool(name = "ChatDM_load_book_meta", description = """
             Load book metadata (title, creation date, chapter count, front matter).
+            WHEN TO USE: Optional context for creative prompts or understanding book structure.
+            RELATED: ChatDM_list_books, ChatDM_load_book_chapter.
             Parameters:
             - bookName: Required. Book title or ID
             """)
@@ -194,6 +201,9 @@ public class NovelOracle {
 
     @Tool(name = "ChatDM_save_book_bio", description = """
             Create or update a character, place, or item bio for a book.
+            WHEN TO USE: Store character/place/item notes for use in novel_character_dialogue_prompt.
+            bioType must be: character, place, or item.
+            RELATED: ChatDM_list_book_bios, ChatDM_load_book_bio (load before creative prompts).
             Parameters:
             - bookName: Required. Book title or ID
             - bioType: Required. One of: character, place, item
@@ -245,9 +255,11 @@ public class NovelOracle {
 
     @Tool(name = "ChatDM_list_book_bios", description = """
             List bios for a book, optionally filtered by type.
+            WHEN TO USE: Before loading a bio for novel_character_dialogue_prompt.
+            RELATED: ChatDM_load_book_bio, ChatDM_save_book_bio, novel_character_dialogue_prompt.
             Parameters:
             - bookName: Required. Book title or ID
-            - bioType: Optional. If provided, filter by character, place, or item
+            - bioType: Optional. Filter by character, place, or item
             """)
     public String listBookBios(String bookName, String bioType) {
         if (bookName == null || bookName.trim().isEmpty()) {
@@ -305,11 +317,13 @@ public class NovelOracle {
     }
 
     @Tool(name = "ChatDM_load_book_bio", description = """
-            Load a single bio by book, type, and name.
+            Load a single bio by book, type, and name. Returns bio content.
+            WHEN TO USE: Before novel_character_dialogue_prompt—pass loaded content as characterBio.
+            RELATED: ChatDM_list_book_bios first; novel_character_dialogue_prompt for dialogue suggestions.
             Parameters:
             - bookName: Required. Book title or ID
             - bioType: Required. character, place, or item
-            - name: Required. Bio name
+            - name: Required. Bio name (from ChatDM_list_book_bios)
             """)
     public String loadBookBio(String bookName, String bioType, String name) {
         if (bookName == null || bookName.trim().isEmpty()) {
@@ -344,7 +358,8 @@ public class NovelOracle {
     }
 
     @Tool(name = "ChatDM_delete_book_bio", description = """
-            Delete a single bio from cloud storage.
+            Delete a single bio from cloud storage. DESTRUCTIVE—cannot be undone.
+            Scope: One bio only. Use ChatDM_delete_book_chapter or ChatDM_delete_book for broader deletion.
             Parameters:
             - bookName: Required. Book title or ID
             - bioType: Required. character, place, or item
@@ -383,7 +398,8 @@ public class NovelOracle {
     }
 
     @Tool(name = "ChatDM_delete_book", description = """
-            Delete entire book from cloud storage (metadata, all chapters, all bios).
+            Delete entire book from cloud storage. DESTRUCTIVE—removes metadata, all chapters, all bios.
+            Scope: Whole book. Use ChatDM_delete_book_chapter or ChatDM_delete_book_bio for partial deletion.
             Parameters:
             - bookName: Required. Book title or ID
             """)
@@ -426,7 +442,8 @@ public class NovelOracle {
     }
 
     @Tool(name = "ChatDM_delete_book_chapter", description = """
-            Delete a single chapter file from cloud storage.
+            Delete a single chapter file from cloud storage. DESTRUCTIVE—cannot be undone.
+            Scope: One chapter only. Use ChatDM_delete_book to remove entire book.
             Parameters:
             - bookName: Required. Book title or ID
             - chapterIndex: Required. 1-based chapter number

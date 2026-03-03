@@ -5,6 +5,8 @@ description: Manages novels in ChatDM - sync books to cloud, character/place/ite
 
 # Novel Writing with ChatDM
 
+For full tool reference and AI assistant guidance, see **[AGENTS.md](../../AGENTS.md)** at project root.
+
 ## When to Use
 
 - User provides book markdown to sync
@@ -28,7 +30,7 @@ description: Manages novels in ChatDM - sync books to cloud, character/place/ite
 - **Get/update metadata**: `ChatDM_get_wryterio_book`, `ChatDM_update_wryterio_book` — title, author, description
 - **Add/update chapters**: `ChatDM_add_wryterio_chapter`, `ChatDM_update_wryterio_chapter` — content as markdown; supports title, description, targetWordCount.
 
-- **Read chapter metadata**: `ChatDM_get_wryterio_chapter` — returns title, description, targetWordCount
+- **Chapter metadata vs content**: `ChatDM_get_wryterio_chapter` — metadata (title, description, targetWordCount) only; `ChatDM_fetch_wryterio_chapter` — full chapter content (markdown)
 - **Story elements**: `ChatDM_list_wryterio_story_elements`, `ChatDM_add_wryterio_story_element`, `ChatDM_update_wryterio_story_element`, `ChatDM_delete_wryterio_story_element`. `ChatDM_sync_wryterio_characters_to_cloud` syncs all types (characters, places, items) to cloud.
 - **Plot timeline (Juonen aikajana)**: `ChatDM_get_wryterio_plot_timeline`, `ChatDM_update_wryterio_plot_timeline` — Save the Cat structure
 - **Book plan (outline)**: `ChatDM_get_wryterio_book_plan`, `ChatDM_update_wryterio_book_plan` — full book plan document (logline, characters, Save the Cat, chapter outlines)
