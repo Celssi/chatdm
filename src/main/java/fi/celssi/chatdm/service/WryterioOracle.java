@@ -180,18 +180,18 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_update_wryterio_chapter", description = """
-            Update a chapter in Wryterio. Content as markdown.
-            DANGER: Passing content='null' or empty string will OVERWRITE and DESTROY the chapter text.
-            Omit content parameter when updating only metadata (title, description, targetWordCount).
-            content is required only when you intend to REPLACE the full chapter text.
-            RELATED: ChatDM_get_wryterio_chapter to read current metadata before updating.
+            Partially update one chapter. The Wryterio API merges only the fields you supply; all other fields stay unchanged.
+            WHEN TO USE — summary / synopsis / metadata only: pass bookId, chapterIndex, and description (and/or title, targetWordCount). Do NOT pass content. Existing chapter body text is preserved.
+            WHEN TO USE — replace chapter text: pass content (markdown) with the full replacement text. Only then is the body rewritten.
+            DANGER: If you pass content as empty, the literal string "null", or other junk, you can wipe or corrupt the stored chapter. When you only mean to set description, leave content unset / do not pass it.
+            RELATED: ChatDM_get_wryterio_chapter (metadata + content length) or ChatDM_fetch_wryterio_chapter (full markdown) before editing if unsure.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
             - chapterIndex: Required. 1-based chapter number
             - title: Optional. New chapter title
-            - content: Optional. New chapter content (markdown). Omit when updating only metadata.
-            - description: Optional. Chapter description
+            - content: Optional. Full chapter body as markdown. Omit entirely when updating only title, description, or targetWordCount.
+            - description: Optional. Chapter summary / synopsis; safe to set without passing content
             - targetWordCount: Optional. Target word count (e.g. "3000")
             """)
     public String updateWryterioChapter(String wryterioToken, String bookId, int chapterIndex, String title, String content, String description, String targetWordCount) {
@@ -718,8 +718,8 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_list_wryterio_chapters", description = """
-            List chapters of a Wryterio book with index and title.
-            WHEN TO USE: Before ChatDM_fetch_wryterio_chapter to get chapter indices (1-based). Use ChatDM_fetch_wryterio_chapter for content; ChatDM_get_wryterio_chapter for metadata only.
+            List chapters: 1-based index, title, and per-chapter target word count (from API; descriptions are not listed here—use ChatDM_get_wryterio_chapter for description).
+            WHEN TO USE: Resolve chapterIndex before fetch/update. ChatDM_fetch_wryterio_chapter = full text; ChatDM_get_wryterio_chapter = title, description, lengths.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
@@ -810,9 +810,9 @@ public class WryterioOracle {
     }
 
     @Tool(name = "ChatDM_get_wryterio_chapter", description = """
-            Read chapter METADATA (title, description, targetWordCount, content length) from Wryterio. Does NOT return full chapter text.
+            Read chapter METADATA: title, description, targetWordCount, and content length. Does NOT return the full chapter body.
             CONTRAST: ChatDM_fetch_wryterio_chapter returns the full chapter CONTENT (markdown).
-            RELATED: Use before ChatDM_update_wryterio_chapter when unsure what to pass; omit content when updating metadata only.
+            Use before writing a new description: then call ChatDM_update_wryterio_chapter with only description (omit content) to avoid touching the chapter text.
             Parameters:
             - wryterioToken: Optional. API token
             - bookId: Required. Wryterio book ID
