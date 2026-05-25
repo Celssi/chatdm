@@ -20,7 +20,8 @@ For full tool reference and AI assistant guidance, see **[AGENTS.md](../../AGENT
 ### Syncing a Book
 
 1. **From markdown**: Use `ChatDM_sync_book` with `bookMarkdown` and optional `bookTitle`
-2. **From Wryterio**: Use `ChatDM_list_wryterio_books` to discover books, then **`ChatDM_sync_wryterio_book_to_cloud`** with `bookId`. This saves chapters, metadata (description, target word count, book plan, notes, story elements, plot timeline), and all story elements (characters, places, items) to cloud storage. Do NOT use `ChatDM_fetch_wryterio_book` when user wants to load/lataa a book—fetch only returns content, it does not save.
+2. **Single chapter edits**: Use `ChatDM_save_book_chapter` to overwrite or `ChatDM_append_book_chapter` to add—no full re-sync needed
+3. **From Wryterio**: Use `ChatDM_list_wryterio_books` to discover books, then **`ChatDM_sync_wryterio_book_to_cloud`** with `bookId`. This saves chapters, metadata (description, target word count, book plan, notes, story elements, plot timeline), and all story elements (characters, places, items) to cloud storage. Do NOT use `ChatDM_fetch_wryterio_book` when user wants to load/lataa a book—fetch only returns content, it does not save.
 3. **List chapters** (before sync or single chapter): `ChatDM_list_wryterio_chapters` — returns index and title for each chapter.
 4. **Single chapter from Wryterio**: `ChatDM_fetch_wryterio_chapter` — fetches one chapter by index (1-based). Use when book is too large or user wants only one chapter.
 
@@ -31,7 +32,7 @@ For full tool reference and AI assistant guidance, see **[AGENTS.md](../../AGENT
 - **Add/update chapters**: `ChatDM_add_wryterio_chapter`, `ChatDM_update_wryterio_chapter` — content as markdown; supports title, description, targetWordCount.
 
 - **Chapter metadata vs content**: `ChatDM_get_wryterio_chapter` — metadata (title, description, targetWordCount) only; `ChatDM_fetch_wryterio_chapter` — full chapter content (markdown)
-- **Story elements**: `ChatDM_list_wryterio_story_elements`, `ChatDM_add_wryterio_story_element`, `ChatDM_update_wryterio_story_element`, `ChatDM_delete_wryterio_story_element`. `ChatDM_sync_wryterio_characters_to_cloud` syncs all types (characters, places, items) to cloud.
+- **Story elements**: `ChatDM_list_wryterio_story_elements`, `ChatDM_add_wryterio_story_element`, `ChatDM_update_wryterio_story_element`, `ChatDM_delete_wryterio_story_element`, `ChatDM_sync_wryterio_story_elements_to_cloud`
 - **Plot timeline (Juonen aikajana)**: `ChatDM_get_wryterio_plot_timeline`, `ChatDM_update_wryterio_plot_timeline` — Save the Cat structure
 - **Book plan (outline)**: `ChatDM_get_wryterio_book_plan`, `ChatDM_update_wryterio_book_plan` — full book plan document (logline, characters, Save the Cat, chapter outlines)
 - **Book cover**: `ChatDM_get_wryterio_book_cover` — returns cover image URL

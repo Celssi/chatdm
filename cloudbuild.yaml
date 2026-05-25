@@ -2,6 +2,14 @@
 # Requires: GCS bucket with PDFs and search_index.db, Artifact Registry repo
 
 steps:
+  # Run unit tests before building the image
+  - name: 'eclipse-temurin:25-jdk-alpine'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - 'chmod +x mvnw && ./mvnw test -B'
+    id: unit-tests
+
   # Build Docker image (Dockerfile runs mvn package; cloud profile fetches index from GCS at runtime)
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -12,6 +20,7 @@ steps:
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/chatdm:latest'
       - '.'
     id: docker-build
+    waitFor: ['unit-tests']
 
   # Push to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'

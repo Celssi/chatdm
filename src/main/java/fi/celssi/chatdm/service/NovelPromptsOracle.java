@@ -1,10 +1,17 @@
 package fi.celssi.chatdm.service;
 
+import fi.celssi.chatdm.service.shared.PromptLoader;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Service;
 
 @Service
 public class NovelPromptsOracle {
+
+    private final PromptLoader promptLoader;
+
+    public NovelPromptsOracle(PromptLoader promptLoader) {
+        this.promptLoader = promptLoader;
+    }
 
     @Tool(name = "novel_what_happens_next_prompt", description = """
             Get a prompt for suggesting what could happen in the next three paragraphs.
@@ -16,21 +23,17 @@ public class NovelPromptsOracle {
             - chapterIndex: Optional. Current chapter number
             """)
     public String getWhatHappensNextPrompt(String recentText, String bookName, Integer chapterIndex) {
-        StringBuilder prompt = new StringBuilder();
-        prompt.append("Suggest 3 possible directions for what could happen in the next three paragraphs of this novel.");
-        prompt.append("\n\n");
+        StringBuilder prompt = new StringBuilder(promptLoader.load("novel/what-happens-next.md"));
         if (recentText != null && !recentText.trim().isEmpty()) {
-            prompt.append("Recent context:\n---\n").append(recentText.trim()).append("\n---\n\n");
+            prompt.insert(0, "Recent context:\n---\n" + recentText.trim() + "\n---\n\n");
         }
         if (bookName != null && !bookName.trim().isEmpty()) {
-            prompt.append("Book: ").append(bookName.trim());
+            String header = "Book: " + bookName.trim();
             if (chapterIndex != null && chapterIndex >= 1) {
-                prompt.append(", Chapter ").append(chapterIndex);
+                header += ", Chapter " + chapterIndex;
             }
-            prompt.append("\n\n");
+            prompt.insert(0, header + "\n\n");
         }
-        prompt.append("For each option, write 2-3 paragraphs that could naturally follow. ");
-        prompt.append("Keep tone and style consistent. Vary the directions (e.g. action, revelation, dialogue, internal conflict).");
         return prompt.toString();
     }
 
@@ -49,16 +52,14 @@ public class NovelPromptsOracle {
         }
 
         StringBuilder prompt = new StringBuilder();
-        prompt.append("Suggest what ").append(characterName.trim()).append(" might say next in this scene.");
-        prompt.append("\n\n");
+        prompt.append("Suggest what ").append(characterName.trim()).append(" might say next in this scene.\n\n");
         if (characterBio != null && !characterBio.trim().isEmpty()) {
             prompt.append("Character bio:\n---\n").append(characterBio.trim()).append("\n---\n\n");
         }
         if (sceneContext != null && !sceneContext.trim().isEmpty()) {
             prompt.append("Scene context:\n---\n").append(sceneContext.trim()).append("\n---\n\n");
         }
-        prompt.append("Provide 2-3 possible lines of dialogue that fit the character's voice and the situation. ");
-        prompt.append("Include brief stage direction or tone notes if helpful.");
+        prompt.append(promptLoader.load("novel/character-dialogue.md"));
         return prompt.toString();
     }
 }

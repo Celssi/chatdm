@@ -20,8 +20,8 @@ ChatDM is an MCP (Model Context Protocol) server that exposes tools for solo TTR
 | **Dungeon** | Rooms, treasure, traps, direction | `ChatDM_dungeon_room`, `ChatDM_treasure` |
 | **Conversation** | Topic, mood, intent | `ChatDM_conversation_setup` |
 | **Cards** | Playing cards, tarot | `ChatDM_draw_playing_cards`, `ChatDM_draw_tarot_cards` |
-| **Journal** | Characters, adventures, NPCs, locations, campaigns | `ChatDM_save_character`, `ChatDM_start_adventure`, `ChatDM_log_event`, etc. |
-| **Novel** | Books, bios, chapters (cloud storage) | `ChatDM_sync_book`, `ChatDM_load_book_chapter`, `ChatDM_save_book_bio` |
+| **Journal** | Characters, adventures, NPCs, locations, campaigns | `ChatDM_save_character`, `ChatDM_start_adventure`, `ChatDM_log_event`, delete/update tools, etc. |
+| **Novel** | Books, bios, chapters (cloud storage) | `ChatDM_sync_book`, `ChatDM_save_book_chapter`, `ChatDM_load_book_chapter`, `ChatDM_save_book_bio` |
 | **Wryterio** | Novel writing app integration | `ChatDM_list_wryterio_books`, `ChatDM_sync_wryterio_book_to_cloud`, etc. |
 | **Search** | PDF resources, rules lookup | `ChatDM_list_resources`, `ChatDM_search_resource` |
 | **Prompts** | Game-specific and novel prompts | `novel_what_happens_next_prompt`, `tor_play_scene_prompt`, etc. |
@@ -44,6 +44,8 @@ ChatDM is an MCP (Model Context Protocol) server that exposes tools for solo TTR
 1. Sync: `ChatDM_sync_book` — pass `bookMarkdown` (H2 `## ` for chapter splits) and optional `bookTitle`
 2. List: `ChatDM_list_books` — discover available books
 3. Load: `ChatDM_load_book_chapter` — get chapter content by `bookName` and `chapterIndex` (1-based)
+4. Save one chapter: `ChatDM_save_book_chapter` — update a single chapter without re-syncing the whole book
+5. Append chapter: `ChatDM_append_book_chapter` — add a new chapter with the next index
 
 ### Bio Workflow
 

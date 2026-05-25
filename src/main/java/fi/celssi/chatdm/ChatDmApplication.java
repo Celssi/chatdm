@@ -1,6 +1,8 @@
 package fi.celssi.chatdm;
 
 import fi.celssi.chatdm.service.*;
+import fi.celssi.chatdm.service.wryterio.*;
+import fi.celssi.chatdm.service.journal.*;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.SpringApplication;
@@ -48,10 +50,17 @@ public class ChatDmApplication {
                 ConversationOracle conversationOracle,
                 CardOracle cardOracle,
                 GameResourceOracle gameResourceOracle,
-                JournalOracle journalOracle,
+                CharacterJournalTools characterJournalTools,
+                AdventureJournalTools adventureJournalTools,
+                NpcJournalTools npcJournalTools,
+                LocationJournalTools locationJournalTools,
+                CampaignJournalTools campaignJournalTools,
                 NovelOracle novelOracle,
                 NovelPromptsOracle novelPromptsOracle,
-                WryterioOracle wryterioOracle,
+                WryterioBookTools wryterioBookTools,
+                WryterioChapterTools wryterioChapterTools,
+                WryterioStoryElementTools wryterioStoryElementTools,
+                WryterioSyncTools wryterioSyncTools,
                 BrambletrekPromptsOracle brambletrekPromptsOracle,
                 MyLittlePonyPromptsOracle myLittlePonyPromptsOracle,
                 DnDPromptsOracle dndPromptsOracle,
@@ -61,7 +70,11 @@ public class ChatDmApplication {
                     .builder()
                     .toolObjects(dungeonOracle, narrativeOracle, npcOracle, sceneOracle,
                             basicOracle, conversationOracle, cardOracle, gameResourceOracle,
-                            journalOracle, novelOracle, novelPromptsOracle, wryterioOracle, brambletrekPromptsOracle, myLittlePonyPromptsOracle,
+                            characterJournalTools, adventureJournalTools, npcJournalTools,
+                            locationJournalTools, campaignJournalTools,
+                            novelOracle, novelPromptsOracle,
+                            wryterioBookTools, wryterioChapterTools, wryterioStoryElementTools, wryterioSyncTools,
+                            brambletrekPromptsOracle, myLittlePonyPromptsOracle,
                             dndPromptsOracle, theOneRingPromptsOracle, writingTools)
                     .build();
         }

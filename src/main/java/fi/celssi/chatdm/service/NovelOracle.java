@@ -74,12 +74,8 @@ public class NovelOracle {
                     LocalDateTime.now().format(DATE_FORMAT), chapters.size(), frontMatter);
 
             boolean isUpdate = storage.exists(bookPath(bookId), "meta.txt");
-            if (!isUpdate && storage.exists(BOOKS, bookId + "_meta.txt")) {
-                isUpdate = true; // migration: old flat format
-            }
             if (isUpdate) {
                 String existingMeta = storage.read(bookPath(bookId), "meta.txt");
-                if (existingMeta == null) existingMeta = storage.read(BOOKS, bookId + "_meta.txt");
                 if (existingMeta != null) {
                     String created = extractValue(existingMeta, "CREATED:");
                     metaContent = String.format("""
@@ -113,14 +109,7 @@ public class NovelOracle {
             """)
     public String listBooks() {
         try {
-            List<String> bookIds = new ArrayList<>(storage.listSubdirs(BOOKS));
-            final List<String> ids = bookIds;
-            storage.list(BOOKS).stream()
-                    .filter(f -> f.endsWith("_meta.txt"))
-                    .map(f -> f.replace("_meta.txt", ""))
-                    .filter(id -> !ids.contains(id))
-                    .forEach(bookIds::add);
-            bookIds = bookIds.stream().sorted().distinct().toList();
+            List<String> bookIds = storage.listSubdirs(BOOKS).stream().sorted().toList();
 
             if (bookIds.isEmpty()) {
                 return "No books saved yet.";
@@ -130,7 +119,6 @@ public class NovelOracle {
                     .map(id -> {
                         try {
                             String meta = storage.read(bookPath(id), "meta.txt");
-                            if (meta == null) meta = storage.read(BOOKS, id + "_meta.txt");
                             String title = meta != null ? extractValue(meta, "TITLE:") : id;
                             return "  - " + title + " (id: " + id + ")";
                         } catch (IOException e) {
@@ -166,7 +154,6 @@ public class NovelOracle {
             }
 
             String content = storage.read(chaptersPath(bookId), chapterIndex + ".md");
-            if (content == null) content = storage.read(BOOKS, bookId + "_" + chapterIndex + ".md");
             return content != null ? content : "Error: Chapter " + chapterIndex + " not found.";
         } catch (IOException e) {
             return "Error loading chapter: " + e.getMessage();
@@ -192,7 +179,6 @@ public class NovelOracle {
             }
 
             String content = storage.read(bookPath(bookId), "meta.txt");
-            if (content == null) content = storage.read(BOOKS, bookId + "_meta.txt");
             return content != null ? content : "Error: Metadata not found.";
         } catch (IOException e) {
             return "Error loading metadata: " + e.getMessage();
@@ -290,20 +276,6 @@ public class NovelOracle {
                     }
                 }
             }
-            // Migration: also check old flat format
-            String prefix = bookId + "_";
-            for (String fileName : storage.list(BOOKS)) {
-                if (!fileName.startsWith(prefix) || (!fileName.contains("_character_") && !fileName.contains("_place_") && !fileName.contains("_item_"))) continue;
-                String type = fileName.contains("_character_") ? "character" : fileName.contains("_place_") ? "place" : "item";
-                if (bioType != null && !bioType.trim().isEmpty() && !type.equals(bioType.toLowerCase())) continue;
-                try {
-                    String content = storage.read(BOOKS, fileName);
-                    String name = content != null ? extractValue(content, "NAME:") : fileName.replace(prefix + type + "_", "").replace(".md", "");
-                    bios.add("  - " + name + " (" + type + ")");
-                } catch (IOException e) {
-                    bios.add("  - " + fileName);
-                }
-            }
             bios = bios.stream().distinct().sorted().toList();
 
             if (bios.isEmpty()) {
@@ -350,7 +322,6 @@ public class NovelOracle {
                 default -> itemsPath(bookId);
             };
             String content = storage.read(subDir, fileName);
-            if (content == null) content = storage.read(BOOKS, bookId + "_" + bioType.toLowerCase() + "_" + sanitizedName + ".md");
             return content != null ? content : "Error: Bio not found.";
         } catch (IOException e) {
             return "Error loading bio: " + e.getMessage();
@@ -390,7 +361,6 @@ public class NovelOracle {
                 default -> itemsPath(bookId);
             };
             storage.delete(subDir, fileName);
-            storage.delete(BOOKS, bookId + "_" + bioType.toLowerCase() + "_" + sanitizedName + ".md"); // old format if exists
             return String.format("Bio '%s' deleted.", name);
         } catch (IOException e) {
             return "Error deleting bio: " + e.getMessage();
@@ -415,7 +385,6 @@ public class NovelOracle {
             }
 
             int deleted = 0;
-            // New format: delete book folder contents
             if (storage.listSubdirs(BOOKS).contains(bookId)) {
                 for (String sub : List.of("chapters", "characters", "places", "items")) {
                     String subDir = bookPath(bookId) + "/" + sub;
@@ -426,14 +395,6 @@ public class NovelOracle {
                 }
                 storage.delete(bookPath(bookId), "meta.txt");
                 deleted++;
-            }
-            // Old format: delete flat files
-            String prefix = bookId + "_";
-            for (String fileName : storage.list(BOOKS)) {
-                if (fileName.startsWith(prefix)) {
-                    storage.delete(BOOKS, fileName);
-                    deleted++;
-                }
             }
             return String.format("Book '%s' deleted (%d files).", bookName, deleted);
         } catch (IOException e) {
@@ -463,11 +424,128 @@ public class NovelOracle {
             }
 
             storage.delete(chaptersPath(bookId), chapterIndex + ".md");
-            storage.delete(BOOKS, bookId + "_" + chapterIndex + ".md"); // old format if exists
             return String.format("Chapter %d deleted.", chapterIndex);
         } catch (IOException e) {
             return "Error deleting chapter: " + e.getMessage();
         }
+    }
+
+    @Tool(name = "ChatDM_save_book_chapter", description = """
+            Save or overwrite a single chapter in cloud storage without re-syncing the whole book.
+            WHEN TO USE: Update one chapter after editing; avoids ChatDM_sync_book for small changes.
+            RELATED: ChatDM_load_book_chapter, ChatDM_append_book_chapter, ChatDM_sync_book for full-book import.
+            Parameters:
+            - bookName: Required. Book title or ID (from ChatDM_list_books)
+            - chapterIndex: Required. 1-based chapter number to write or overwrite
+            - content: Required. Chapter markdown content
+            - title: Optional. If provided, prepends ## title to content when content does not start with ##
+            """)
+    public String saveBookChapter(String bookName, int chapterIndex, String content, String title) {
+        if (bookName == null || bookName.trim().isEmpty()) {
+            return "Error: Book name is required";
+        }
+        if (chapterIndex < 1) {
+            return "Error: Chapter index must be >= 1";
+        }
+        if (content == null || content.trim().isEmpty()) {
+            return "Error: Chapter content is required";
+        }
+
+        try {
+            String bookId = resolveBookId(bookName);
+            if (bookId == null) {
+                return "Error: Book not found. Use ChatDM_list_books or ChatDM_sync_book first.";
+            }
+
+            String chapterContent = formatChapterContent(content, title);
+            storage.write(chaptersPath(bookId), chapterIndex + ".md", chapterContent);
+            updateChapterCount(bookId, chapterIndex);
+            return String.format("Chapter %d saved for book '%s'.", chapterIndex, bookName);
+        } catch (IOException e) {
+            return "Error saving chapter: " + e.getMessage();
+        }
+    }
+
+    @Tool(name = "ChatDM_append_book_chapter", description = """
+            Append a new chapter to a book with the next available chapter index.
+            WHEN TO USE: Add a new chapter without knowing the current chapter count.
+            RELATED: ChatDM_save_book_chapter to overwrite; ChatDM_list_books for book discovery.
+            Parameters:
+            - bookName: Required. Book title or ID
+            - content: Required. Chapter markdown content
+            - title: Optional. If provided, prepends ## title to content when content does not start with ##
+            """)
+    public String appendBookChapter(String bookName, String content, String title) {
+        if (bookName == null || bookName.trim().isEmpty()) {
+            return "Error: Book name is required";
+        }
+        if (content == null || content.trim().isEmpty()) {
+            return "Error: Chapter content is required";
+        }
+
+        try {
+            String bookId = resolveBookId(bookName);
+            if (bookId == null) {
+                return "Error: Book not found. Use ChatDM_list_books or ChatDM_sync_book first.";
+            }
+
+            int nextIndex = countChapters(bookId) + 1;
+            String chapterContent = formatChapterContent(content, title);
+            storage.write(chaptersPath(bookId), nextIndex + ".md", chapterContent);
+            updateChapterCount(bookId, nextIndex);
+            return String.format("Chapter %d appended to book '%s'.", nextIndex, bookName);
+        } catch (IOException e) {
+            return "Error appending chapter: " + e.getMessage();
+        }
+    }
+
+    private String formatChapterContent(String content, String title) {
+        String trimmed = content.trim();
+        if (trimmed.startsWith("## ")) {
+            return trimmed;
+        }
+        if (title != null && !title.trim().isEmpty()) {
+            return "## " + title.trim() + "\n\n" + trimmed;
+        }
+        return trimmed;
+    }
+
+    private int countChapters(String bookId) throws IOException {
+        int max = 0;
+        for (String fileName : storage.list(chaptersPath(bookId))) {
+            if (fileName.endsWith(".md")) {
+                try {
+                    int idx = Integer.parseInt(fileName.replace(".md", ""));
+                    max = Math.max(max, idx);
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+        return max;
+    }
+
+    private void updateChapterCount(String bookId, int chapterIndex) throws IOException {
+        String existingMeta = storage.read(bookPath(bookId), "meta.txt");
+        if (existingMeta == null) {
+            return;
+        }
+
+        int currentCount = 0;
+        try {
+            currentCount = Integer.parseInt(extractValue(existingMeta, "CHAPTER_COUNT:"));
+        } catch (NumberFormatException ignored) {
+        }
+        int newCount = Math.max(currentCount, chapterIndex);
+        String updated = existingMeta.replaceFirst(
+                "(?m)^CHAPTER_COUNT: .*$",
+                "CHAPTER_COUNT: " + newCount);
+        if (updated.equals(existingMeta)) {
+            updated = existingMeta + "\nCHAPTER_COUNT: " + newCount + "\n";
+        }
+        updated = updated.replaceFirst(
+                "(?m)^LAST_UPDATED: .*$",
+                "LAST_UPDATED: " + LocalDateTime.now().format(DATE_FORMAT));
+        storage.write(bookPath(bookId), "meta.txt", updated);
     }
 
     private String extractTitle(String markdown) {
@@ -484,26 +562,12 @@ public class NovelOracle {
         if (storage.exists(bookPath(sanitized), "meta.txt")) {
             return sanitized;
         }
-        if (storage.exists(BOOKS, sanitized + "_meta.txt")) {
-            return sanitized;
-        }
         for (String bookId : storage.listSubdirs(BOOKS)) {
             String meta = storage.read(bookPath(bookId), "meta.txt");
             if (meta != null) {
                 String title = extractValue(meta, "TITLE:");
                 if (title.equalsIgnoreCase(bookName.trim()) || sanitizeFilename(title).equals(sanitized)) {
                     return bookId;
-                }
-            }
-        }
-        for (String name : storage.list(BOOKS)) {
-            if (name.endsWith("_meta.txt")) {
-                String meta = storage.read(BOOKS, name);
-                if (meta != null) {
-                    String title = extractValue(meta, "TITLE:");
-                    if (title.equalsIgnoreCase(bookName.trim()) || sanitizeFilename(title).equals(sanitized)) {
-                        return name.replace("_meta.txt", "");
-                    }
                 }
             }
         }

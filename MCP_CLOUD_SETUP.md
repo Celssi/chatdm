@@ -66,9 +66,9 @@ This error often means the client couldn't connect. Try:
 3. **Check URL**: Ensure no trailing slash, use `/mcp` for Streamable HTTP
 4. **Cold start**: First request may take 10-30s if the service was idle
 
-The server allows unauthenticated access - no API key or auth headers needed.
+The server allows unauthenticated access — no API key or auth headers needed for MCP connection.
 
-## Novel Writing & Wryterio Integration
+## Wryterio integration
 
 For novel-writing tools that fetch from [Wryterio](https://wryterio.com/), add your API token:
 

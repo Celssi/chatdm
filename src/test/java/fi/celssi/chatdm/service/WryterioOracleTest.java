@@ -1,5 +1,7 @@
 package fi.celssi.chatdm.service;
 
+import fi.celssi.chatdm.service.wryterio.WryterioBookTools;
+import fi.celssi.chatdm.service.wryterio.WryterioChapterTools;
 import fi.celssi.chatdm.util.WryterioTokenHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +27,10 @@ class WryterioOracleTest {
     private static final String TOKEN = "wryterio_test_token";
 
     @Autowired
-    private WryterioOracle wryterioOracle;
+    private WryterioBookTools wryterioBookTools;
+
+    @Autowired
+    private WryterioChapterTools wryterioChapterTools;
 
     @Autowired
     private RestTemplate restTemplate;
@@ -55,7 +60,7 @@ class WryterioOracleTest {
                                 .body("{\"error\":\"Invalid token or expired\"}")
                                 .contentType(MediaType.APPLICATION_JSON));
 
-        String result = wryterioOracle.listWryterioBooks(null);
+        String result = wryterioBookTools.listWryterioBooks(null);
 
         assertTrue(result.contains("Invalid token or expired"), "Should surface API error message: " + result);
         assertTrue(result.startsWith("Error fetching Wryterio books:"), "Should use error context: " + result);
@@ -70,7 +75,7 @@ class WryterioOracleTest {
                                 .body("{\"message\":\"Access denied\"}")
                                 .contentType(MediaType.APPLICATION_JSON));
 
-        String result = wryterioOracle.listWryterioBooks(null);
+        String result = wryterioBookTools.listWryterioBooks(null);
 
         assertTrue(result.contains("Error fetching Wryterio books:"), "Should have error context: " + result);
     }
@@ -84,7 +89,7 @@ class WryterioOracleTest {
                                 .body("{\"error\":\"Database connection failed\"}")
                                 .contentType(MediaType.APPLICATION_JSON));
 
-        String result = wryterioOracle.listWryterioBooks(null);
+        String result = wryterioBookTools.listWryterioBooks(null);
 
         assertTrue(result.contains("Database connection failed"), "Should surface server error: " + result);
     }
@@ -98,23 +103,29 @@ class WryterioOracleTest {
                                 .body("{\"id\":\"book-1\",\"title\":\"My Title\"}")
                                 .contentType(MediaType.APPLICATION_JSON));
 
-        String result = wryterioOracle.createWryterioBook(null, "My Title");
+        String result = wryterioBookTools.createWryterioBook(null, "My Title");
 
         assertFalse(result.startsWith("Error:"), "Should succeed: " + result);
         assertTrue(result.contains("book-1"), "Should contain created book id: " + result);
     }
 
     @Test
-    void createBook_handlesUnicodeAndSpecialChars() {
+    void updateChapter_rejectsContentWithoutConfirmOverwrite() {
+        String result = wryterioChapterTools.updateWryterioChapter(
+                null, "book-1", 1, null, "New chapter body text", null, null, null);
+
+        assertTrue(result.contains("confirmOverwrite=true"), "Should require explicit overwrite: " + result);
+    }
+
+    @Test
+    void updateChapter_allowsMetadataOnlyWithoutContent() {
         mockServer
-                .expect(requestTo(API_BASE + "/api/books"))
-                .andRespond(
-                        withSuccess()
-                                .body("{\"id\":\"b1\",\"title\":\"Café & \"quotes\" — em‑dash\"}")
-                                .contentType(MediaType.APPLICATION_JSON));
+                .expect(requestTo(API_BASE + "/api/books/book-1/chapters/1"))
+                .andRespond(withSuccess().body("{}").contentType(MediaType.APPLICATION_JSON));
 
-        String result = wryterioOracle.createWryterioBook(null, "Café & \"quotes\" — em‑dash");
+        String result = wryterioChapterTools.updateWryterioChapter(
+                null, "book-1", 1, null, null, "A synopsis", null, null);
 
-        assertFalse(result.startsWith("Error:"), "Should handle unicode/special chars: " + result);
+        assertFalse(result.startsWith("Error:"), "Metadata-only update should succeed: " + result);
     }
 }
