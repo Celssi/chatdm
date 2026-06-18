@@ -1,6 +1,6 @@
 # Contributing to ChatDM
 
-ChatDM is a Spring Boot MCP server exposing tools for solo TTRPG play and novel writing.
+ChatDM is a Spring Boot MCP server exposing tools for solo TTRPG play.
 
 ## Prerequisites
 
@@ -59,9 +59,8 @@ JaCoCo report: `target/site/jacoco/index.html`
 
 ```
 src/main/java/fi/celssi/chatdm/
-├── service/           # Oracle tools (dice, scene, PDF search, novel, prompts)
+├── service/           # Oracle tools (dice, scene, PDF search, prompts)
 ├── service/journal/   # Campaign journal tools
-├── service/wryterio/  # Wryterio integration
 ├── service/shared/    # PromptLoader, guards, helpers
 ├── storage/           # JournalStorage implementations
 └── config/            # Web/CORS/user filters (cloud profile)

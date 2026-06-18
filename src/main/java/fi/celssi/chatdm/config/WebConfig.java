@@ -1,6 +1,5 @@
 package fi.celssi.chatdm.config;
 
-import fi.celssi.chatdm.util.WryterioTokenHolder;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -10,8 +9,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -29,31 +26,6 @@ public class WebConfig {
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
         log.info("ChatDM cloud profile active - MCP server ready");
-    }
-
-    @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE)
-    public Filter wryterioTokenFilter() {
-        return new Filter() {
-            @Override
-            public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-                    throws IOException, ServletException {
-                try {
-                    if (request instanceof HttpServletRequest http) {
-                        String token = http.getHeader("X-Wryterio-Token");
-                        if (token == null || token.isBlank()) {
-                            token = http.getParameter("wryterio_token");
-                        }
-                        if (token != null && !token.isBlank()) {
-                            WryterioTokenHolder.set(token.trim());
-                        }
-                    }
-                    chain.doFilter(request, response);
-                } finally {
-                    WryterioTokenHolder.clear();
-                }
-            }
-        };
     }
 
     @Bean

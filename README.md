@@ -1,4 +1,4 @@
-MCP server for solo TTRPG play and novel writing (~130 tools).
+MCP server for solo TTRPG play (~91 tools).
 
 ## What is ChatDM?
 
@@ -6,14 +6,10 @@ ChatDM is a **Model Context Protocol (MCP) server** — not a web app. You use i
 
 - **RPG oracles**: dice, yes/no, likelihood, narrative/scene/NPC/dungeon generators
 - **Campaign journal**: characters, adventures, NPCs, locations, campaigns (local or GCS)
-- **Novel writing**: book/chapter/bio cloud storage, creative prompts
-- **Wryterio integration**: two-way sync with [Wryterio](https://wryterio.com/)
 - **PDF rule search**: FTS5 index over licensed rulebooks (TOR, D&D 5e, Brambletrek, MLP)
 
 ```
 Cursor / Claude  ──MCP──►  ChatDM (Spring Boot)  ──►  GCS / local files
-                                    │
-                                    └──► Wryterio API
 ```
 
 ## Quick start
@@ -26,7 +22,7 @@ Cursor / Claude  ──MCP──►  ChatDM (Spring Boot)  ──►  GCS / loca
 
 **Client setup**: [MCP_CLOUD_SETUP.md](MCP_CLOUD_SETUP.md)
 
-**Tool workflows (especially novel/Wryterio)**: [AGENTS.md](AGENTS.md)
+**Tool workflows**: [AGENTS.md](AGENTS.md)
 
 **Full tool catalog**: [docs/TOOLS.md](docs/TOOLS.md)
 
@@ -39,8 +35,6 @@ Cursor / Claude  ──MCP──►  ChatDM (Spring Boot)  ──►  GCS / loca
 | RPG basics | `ChatDM_roll_dice`, `ChatDM_yes_or_no`, `ChatDM_likelihood` |
 | Generators | `ChatDM_action`, `ChatDM_scene_setup`, `ChatDM_generate_npc` |
 | Journal | `ChatDM_save_character`, `ChatDM_start_adventure`, `ChatDM_log_event` |
-| Novel | `ChatDM_sync_book`, `ChatDM_save_book_chapter`, `ChatDM_load_book_chapter` |
-| Wryterio | `ChatDM_sync_wryterio_book_to_cloud`, `ChatDM_update_wryterio_chapter` |
 | Rules search | `ChatDM_list_resources`, `ChatDM_search_resource` |
 | Game prompts | `dnd_start_adventure_prompt`, `tor_play_scene_prompt`, … |
 

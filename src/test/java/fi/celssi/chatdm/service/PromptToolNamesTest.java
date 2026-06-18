@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Ensures game/novel prompt texts reference only registered MCP tool names.
+ * Ensures game prompt texts reference only registered MCP tool names.
  */
 class PromptToolNamesTest {
 
@@ -25,8 +25,6 @@ class PromptToolNamesTest {
             "journal_load_adventure",
             "journal_create",
             "ChatDM_draw_cards",
-            "ChatDM_fetch_wryterio_characters",
-            "ChatDM_sync_wryterio_characters_to_cloud",
             "ChatDM_list_characters_by_campaign",
             "ChatDM_list_npcs_by_campaign",
             "ChatDM_list_locations_by_campaign"

@@ -50,14 +50,13 @@ steps:
       - '--allow-unauthenticated'
       - '--memory=2Gi'
       - '--timeout=3600'
-      - '--set-env-vars=SPRING_PROFILES_ACTIVE=cloud,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},WRYTERIO_API_URL=${_WRYTERIO_API_URL}'
+      - '--set-env-vars=SPRING_PROFILES_ACTIVE=cloud,GOOGLE_CLOUD_PROJECT=${PROJECT_ID}'
     id: deploy
     waitFor: ['push']
 
 substitutions:
   _REGION: europe-north1
   _REPOSITORY: chatdm
-  _WRYTERIO_API_URL: https://wryterio.com
 
 options:
   logging: CLOUD_LOGGING_ONLY

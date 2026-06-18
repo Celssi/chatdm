@@ -32,9 +32,7 @@ echo "Pushing to Artifact Registry..."
 docker push "$IMAGE"
 
 # Deploy to Cloud Run
-# WRYTERIO_API_URL: set before running to override (default: https://wryterio.com)
-WRYTERIO_API_URL="${WRYTERIO_API_URL:-https://wryterio.com}"
-echo "Deploying to Cloud Run (WRYTERIO_API_URL=$WRYTERIO_API_URL)..."
+echo "Deploying to Cloud Run..."
 gcloud run deploy "$SERVICE_NAME" \
   --image="$IMAGE" \
   --region="$REGION" \
@@ -42,7 +40,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --allow-unauthenticated \
   --memory=2Gi \
   --timeout=3600 \
-  --set-env-vars="SPRING_PROFILES_ACTIVE=cloud,GOOGLE_CLOUD_PROJECT=$PROJECT_ID,WRYTERIO_API_URL=$WRYTERIO_API_URL" \
+  --set-env-vars="SPRING_PROFILES_ACTIVE=cloud,GOOGLE_CLOUD_PROJECT=$PROJECT_ID" \
   --project="$PROJECT_ID"
 
 echo ""
